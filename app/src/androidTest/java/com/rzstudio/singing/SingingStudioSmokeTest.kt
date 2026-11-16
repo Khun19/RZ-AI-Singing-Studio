@@ -1,6 +1,6 @@
 package com.rzstudio.singing
 
-import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Rule
@@ -12,9 +12,9 @@ class SingingStudioSmokeTest {
 
     @Test
     fun homeScreenShowsImportAndRecordingSections() {
-        composeRule.onNodeWithText("Singing Studio").assertExists()
-        composeRule.onNodeWithText("Import song").assertExists()
-        composeRule.onNodeWithText("RECORDING STUDIO").assertExists()
-        composeRule.onNodeWithText("AI VOCAL SEPARATION").assertExists()
+        composeRule.onNodeWithText("Singing Studio").assertIsDisplayed()
+        composeRule.onNodeWithText("Import song").assertIsDisplayed()
+        composeRule.onNodeWithText("RECORDING STUDIO").assertIsDisplayed()
+        composeRule.onNodeWithText("AI VOCAL SEPARATION").assertIsDisplayed()
     }
 }
