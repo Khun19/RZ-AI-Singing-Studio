@@ -1,6 +1,9 @@
 package com.rzstudio.singing
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,7 +20,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -44,6 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import java.io.File
 
 private val StudioBackground = Color(0xFF090B10)
 private val StudioSurface = Color(0xFF171B24)
@@ -70,12 +77,17 @@ private fun SingingStudioApp() {
     var selectedAudio by remember { mutableStateOf<Uri?>(null) }
     var audioName by remember { mutableStateOf("No song selected") }
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
+    var isRecording by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Ready") }
+    var takes by remember { mutableStateOf(TakeStore.list(context)) }
 
     DisposableEffect(Unit) {
         onDispose {
+            runCatching { recorder?.stop() }
+            recorder?.release()
             player?.release()
-            player = null
         }
     }
 
@@ -83,181 +95,239 @@ private fun SingingStudioApp() {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
             player?.release()
             player = null
             selectedAudio = uri
             audioName = uri.lastPathSegment?.substringAfterLast('/') ?: "Imported audio"
             isPlaying = false
+            status = "Audio selected"
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = StudioBackground
-    ) {
+    val microphonePermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            status = "Microphone permission granted. Tap Record to begin."
+        } else {
+            status = "Microphone permission denied"
+        }
+    }
+
+    fun startRecording() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        val output = TakeStore.newTakeFile(context)
+        try {
+            val activeRecorder = MediaRecorder(context).apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioEncodingBitRate(192_000)
+                setAudioSamplingRate(44_100)
+                setOutputFile(output.absolutePath)
+                prepare()
+                start()
+            }
+            recorder = activeRecorder
+            isRecording = true
+            status = "Recording: ${output.name}"
+        } catch (error: Exception) {
+            output.delete()
+            recorder?.release()
+            recorder = null
+            status = "Recording could not start: ${error.javaClass.simpleName}"
+        }
+    }
+
+    fun stopRecording() {
+        val activeRecorder = recorder ?: return
+        try {
+            activeRecorder.stop()
+            status = "Take saved"
+        } catch (_: RuntimeException) {
+            status = "Recording was too short or could not be saved"
+        } finally {
+            activeRecorder.release()
+            recorder = null
+            isRecording = false
+            takes = TakeStore.list(context)
+        }
+    }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = StudioBackground) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 22.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    "RZ AI",
-                    color = StudioAccent,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Singing Studio",
-                    color = Color.White,
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Your song. Your voice. Your studio.",
-                    color = Color.LightGray,
-                    fontSize = 14.sp
-                )
+                Text("RZ AI", color = StudioAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Singing Studio", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                Text("Your song. Your voice. Your studio.", color = Color.LightGray, fontSize = 14.sp)
             }
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = StudioSurface),
-                shape = RoundedCornerShape(22.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.material3.Icon(
-                            Icons.Default.LibraryMusic,
-                            contentDescription = null,
-                            tint = StudioAccent
-                        )
-                        Text(
-                            "  YOUR SONG",
-                            color = StudioAccent,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                    Text(
-                        audioName,
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        "Import an MP3 or WAV track to start your session.",
-                        color = Color.LightGray,
-                        fontSize = 13.sp
-                    )
+            StudioCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.LibraryMusic, null, tint = StudioAccent)
+                    Text("  YOUR SONG", color = StudioAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                Text(audioName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text("Import an audio file you own or are authorized to use.", color = Color.LightGray, fontSize = 13.sp)
+                Button(
+                    onClick = { audioPicker.launch(arrayOf("audio/mpeg", "audio/wav", "audio/*")) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (selectedAudio == null) "Import song" else "Choose another song") }
+
+                if (selectedAudio != null) {
                     Button(
-                        onClick = { audioPicker.launch(arrayOf("audio/mpeg", "audio/wav", "audio/*")) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (selectedAudio == null) "Import song" else "Choose another song")
-                    }
-                    if (selectedAudio != null) {
-                        Button(
-                            onClick = {
-                                try {
-                                    if (isPlaying) {
-                                        player?.pause()
-                                        isPlaying = false
-                                    } else {
-                                        val activePlayer = player ?: MediaPlayer.create(context, selectedAudio!!)?.also {
-                                            player = it
-                                        }
-                                        if (activePlayer != null) {
-                                            activePlayer.start()
-                                            isPlaying = true
+                        onClick = {
+                            try {
+                                if (isPlaying) {
+                                    player?.pause()
+                                    isPlaying = false
+                                } else {
+                                    val activePlayer = player ?: MediaPlayer.create(context, selectedAudio!!)?.also {
+                                        player = it
+                                        it.setOnCompletionListener { completed ->
+                                            completed.seekTo(0)
+                                            isPlaying = false
                                         }
                                     }
-                                } catch (_: IllegalStateException) {
-                                    player?.release()
-                                    player = null
-                                    isPlaying = false
+                                    if (activePlayer != null) {
+                                        activePlayer.start()
+                                        isPlaying = true
+                                    } else {
+                                        status = "This audio format could not be played"
+                                    }
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            } catch (_: Exception) {
+                                player?.release()
+                                player = null
+                                isPlaying = false
+                                status = "Playback failed"
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        androidx.compose.material3.Icon(
+                            if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = null
+                        )
+                        Text(if (isPlaying) "  Pause preview" else "  Play preview")
+                    }
+                }
+            }
+
+            Text("RECORDING STUDIO", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            StudioCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.Mic, null, tint = StudioAccent)
+                    Text("  VOCAL RECORDING", color = StudioAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                Text(
+                    "Record a microphone take as an AAC audio file. Headphone monitoring and synchronized multitrack recording are not implemented yet.",
+                    color = Color.LightGray,
+                    fontSize = 13.sp
+                )
+                Button(
+                    onClick = { if (isRecording) stopRecording() else startRecording() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.material3.Icon(
+                        if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                        contentDescription = null
+                    )
+                    Text(if (isRecording) "  Stop and save take" else "  Record vocal take")
+                }
+            }
+
+            StudioCard {
+                Text("VOCAL TAKES  •  ${takes.size}", color = StudioAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                if (takes.isEmpty()) {
+                    Text("No recordings yet.", color = Color.LightGray, fontSize = 13.sp)
+                } else {
+                    takes.forEach { take ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.material3.Icon(
-                                if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                contentDescription = null
-                            )
-                            Text(if (isPlaying) "  Pause preview" else "  Play preview")
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(take.name, color = Color.White, fontSize = 13.sp)
+                                Text("${take.length() / 1024} KB", color = Color.Gray, fontSize = 11.sp)
+                            }
+                            Button(onClick = {
+                                TakeStore.delete(take)
+                                takes = TakeStore.list(context)
+                                status = "Take deleted"
+                            }) { Text("Delete") }
                         }
                     }
                 }
             }
 
-            Text(
-                "START CREATING",
-                color = Color.LightGray,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
+            StudioCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.GraphicEq, null, tint = StudioAccent)
+                    Text("  AI VOCAL SEPARATION", color = StudioAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                Text(
+                    "Not available yet. A compatible model, on-device runtime, quality tests and output validation are required before this feature can be enabled.",
+                    color = Color.LightGray,
+                    fontSize = 13.sp
+                )
+            }
 
-            StudioModeCard(
-                icon = { androidx.compose.material3.Icon(Icons.Default.GraphicEq, null, tint = StudioAccent) },
-                title = "Easy Mode",
-                description = "Import a song, create karaoke backing, then record your voice.",
-                status = "IN DEVELOPMENT"
-            )
-            StudioModeCard(
-                icon = { androidx.compose.material3.Icon(Icons.Default.Mic, null, tint = StudioAccent) },
-                title = "Recording Studio",
-                description = "Record vocals, capture takes and build your own performance.",
-                status = "COMING NEXT"
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                "MVP 0.1.0  •  Android 12+",
-                color = Color.Gray,
-                fontSize = 11.sp,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+            Text(status, color = StudioAccent, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("MVP 0.2.0  •  Android 12+", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
     }
 }
 
 @Composable
-private fun StudioModeCard(
-    icon: @Composable () -> Unit,
-    title: String,
-    description: String,
-    status: String
-) {
+private fun StudioCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = StudioSurface),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .background(Color(0xFF29243A), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) { icon() }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = Color.White, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Text(description, color = Color.LightGray, fontSize = 12.sp)
-                Spacer(Modifier.height(6.dp))
-                Text(status, color = StudioAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
+    }
+}
+
+internal object TakeStore {
+    fun newTakeFile(context: android.content.Context): File {
+        val directory = File(context.filesDir, "recordings").apply { mkdirs() }
+        return File(directory, "take_${System.currentTimeMillis()}.m4a")
+    }
+
+    fun list(context: android.content.Context): List<File> =
+        File(context.filesDir, "recordings")
+            .listFiles { file -> file.isFile && file.extension.equals("m4a", ignoreCase = true) }
+            ?.sortedByDescending { it.lastModified() }
+            ?: emptyList()
+
+    fun delete(file: File): Boolean {
+        val parent = file.parentFile ?: return false
+        if (parent.name != "recordings") return false
+        return file.delete()
     }
 }
