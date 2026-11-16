@@ -84,7 +84,13 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_2
-          script: gradle connectedDebugAndroidTest
+          disable-animations: false
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb wait-for-device
+            adb shell getprop sys.boot_completed
+            gradle connectedDebugAndroidTest
 
   build-debug:
     name: Build debug APK
