@@ -101,6 +101,7 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          # android-emulator-runner splits multiline scripts; invoke one tracked helper script.
           script: bash .github/scripts/run-emulator-tests.sh
       - name: Upload Android instrumentation diagnostics
         if: always()
