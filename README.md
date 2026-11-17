@@ -4,39 +4,42 @@ RZ AI Singing Studio is an Android application for creating karaoke backing trac
 
 ## Current status
 
-This repository is an early MVP. Implemented on the current development branch:
+This repository is an early Android MVP. Implemented on the development branch:
+
 - Import a user-selected audio document through Android Storage Access Framework.
 - Basic audio preview using Android MediaPlayer.
 - Microphone recording to AAC/M4A files using Android MediaRecorder.
 - Local take listing and deletion inside the app's private storage.
 
 Not implemented yet:
+
 - AI vocal/instrumental separation (no model or inference runtime is shipped).
 - Live monitoring, latency compensation, synchronized multitrack recording or take alignment.
 - Pitch correction, denoise, EQ, compression, de-essing, reverb, delay, mixing or mastering.
 - MP3/FLAC export, karaoke video rendering or 4K video export.
 - Release signing and verified physical-device acceptance.
 
-A successful CI build is not evidence that these future features work.
+A successful CI build is not evidence that these future features work. Recording, take persistence and deletion still require successful emulator and physical-device acceptance.
 
 ## Requirements
 
 - Android 12 (API 31) or later.
-- Android Studio/Android SDK for local development, or GitHub Actions for CI.
 - Java 17.
-- Gradle 8.9 (the current CI currently invokes the installed Gradle distribution; Gradle Wrapper setup is still pending).
+- Gradle 8.9 through the committed Gradle Wrapper.
+- Android SDK platform 35 and build tools 35.0.0 for local builds.
 
 ## Build and test
 
-The CI workflow runs JVM unit tests, Android instrumentation tests on an emulator, and assembles a debug APK. For local builds after the wrapper is added, the intended commands are:
+Use the committed Gradle Wrapper:
 
 ```bash
+./gradlew --version
 ./gradlew testDebugUnitTest
 ./gradlew connectedDebugAndroidTest
 ./gradlew assembleDebug
 ```
 
-Until a Gradle Wrapper is committed, use a compatible Gradle 8.9 installation with the same tasks.
+GitHub Actions runs JVM unit tests and Android emulator instrumentation tests. The debug APK is assembled and uploaded only after both test jobs pass. CI artifacts are development builds, not signed production releases.
 
 ## Audio and privacy
 
