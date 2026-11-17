@@ -70,10 +70,10 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
+      - name: Validate committed Gradle Wrapper
+        run: ./gradlew --version
       - name: Run JVM unit tests
-        run: gradle testDebugUnitTest
+        run: ./gradlew testDebugUnitTest
 
   instrumentation-tests:
     name: Android emulator instrumentation tests
@@ -90,21 +90,19 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
       - name: Run emulator tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_2
-          disable-animations: false
+          disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
             adb wait-for-device
-            adb shell getprop sys.boot_completed
-            gradle connectedDebugAndroidTest
+            adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+            ./gradlew connectedDebugAndroidTest --stacktrace
 
   build-debug:
     name: Build debug APK
@@ -122,10 +120,8 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
-      - name: Assemble debug APK
-        run: gradle assembleDebug
+      - name: Assemble debug APK with committed Wrapper
+        run: ./gradlew assembleDebug
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
