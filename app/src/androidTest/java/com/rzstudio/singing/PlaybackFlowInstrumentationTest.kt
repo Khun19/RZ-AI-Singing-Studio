@@ -22,6 +22,7 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.sin
 
 class PlaybackFlowInstrumentationTest {
@@ -51,25 +52,51 @@ class PlaybackFlowInstrumentationTest {
 
         val slider = composeRule.onNodeWithTag("take_seek_slider")
         slider.assertIsDisplayed()
+
+        // Confirm the real MediaPlayer advances before any user seek action.
+        composeRule.waitUntil(3_000) {
+            slider.fetchSemanticsNode().config
+                .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo)
+                ?.current?.let { it in 500f..1_800f } == true
+        }
+
         slider.performTouchInput {
             swipe(
                 start = Offset(2f, centerY),
-                end = Offset(width * 0.5f, centerY),
+                end = Offset(width * 0.7f, centerY),
                 durationMillis = 300
             )
         }
 
+        // The displayed position is sourced from MediaPlayer.currentPosition after seekTo().
         composeRule.waitUntil(2_000) {
             slider.fetchSemanticsNode().config
                 .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo)
-                ?.current?.let { it > 2_000f } == true
+                ?.current?.let { it > 3_000f } == true
         }
 
         composeRule.onNodeWithText("Pause").performClick()
         composeRule.onNodeWithText("Play").assertIsDisplayed()
-        composeRule.onNodeWithText("Play").performClick()
+        val pausedPosition = slider.fetchSemanticsNode().config
+            .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo)
+            ?.current ?: error("Seek slider did not expose its playback position")
 
-        composeRule.waitUntil(8_000) {
+        composeRule.waitUntil(1_500) {
+            val current = slider.fetchSemanticsNode().config
+                .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo)
+                ?.current ?: return@waitUntil false
+            abs(current - pausedPosition) < 250f
+        }
+
+        composeRule.onNodeWithText("Play").performClick()
+        composeRule.waitUntil(2_000) {
+            val current = slider.fetchSemanticsNode().config
+                .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo)
+                ?.current ?: return@waitUntil false
+            current > pausedPosition + 400f
+        }
+
+        composeRule.waitUntil(6_000) {
             composeRule.onAllNodesWithText("Take playback completed")
                 .fetchSemanticsNodes().isNotEmpty()
         }
