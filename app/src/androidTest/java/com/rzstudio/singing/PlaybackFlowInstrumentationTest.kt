@@ -46,6 +46,7 @@ class PlaybackFlowInstrumentationTest {
 
     @Test
     fun playbackCanSeekPauseResumeAndComplete() {
+        composeRule.onNodeWithText(seededTake.name).performScrollTo()
         composeRule.onNodeWithText(seededTake.name).assertIsDisplayed()
         composeRule.onNodeWithText("Play").performClick()
 
@@ -94,6 +95,7 @@ class PlaybackFlowInstrumentationTest {
 
     @Test
     fun takeRemainsAvailableAfterActivityRecreation() {
+        composeRule.onNodeWithText(seededTake.name).performScrollTo()
         composeRule.onNodeWithText(seededTake.name).assertIsDisplayed()
         assertTrue("Take must remain in private storage before recreation", seededTake.exists())
         composeRule.activityRule.scenario.recreate()
