@@ -37,4 +37,19 @@ for attempt in $(seq 1 30); do
 done
 adb shell cmd package list packages >/dev/null
 
+# Generate a real AAC/M4A fixture. The app stores recordings as AAC in an MP4 container;
+# a WAV file renamed to .m4a would test the wrong format and make MediaPlayer reject it.
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  sudo apt-get update
+  sudo apt-get install -y ffmpeg
+fi
+mkdir -p app/src/androidTest/assets
+ffmpeg -y -hide_banner -loglevel error \
+  -f lavfi -i "sine=frequency=440:sample_rate=44100:duration=8" \
+  -c:a aac -b:a 96k -movflags +faststart \
+  app/src/androidTest/assets/playback_fixture.m4a
+test -s app/src/androidTest/assets/playback_fixture.m4a
+ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 \
+  app/src/androidTest/assets/playback_fixture.m4a | grep -qx aac
+
 timeout 15m ./gradlew connectedDebugAndroidTest --stacktrace --console=plain
