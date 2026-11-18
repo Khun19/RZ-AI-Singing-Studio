@@ -115,6 +115,35 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           # android-emulator-runner splits multiline scripts; invoke one tracked helper script.
           script: bash .github/scripts/run-emulator-tests.sh
+      - name: Capture emulator diagnostics (always)
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          diagnostics_dir="app/build/ci-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > "$diagnostics_dir/captured-at.txt"
+          id > "$diagnostics_dir/runner-identity.txt" 2>&1
+          groups >> "$diagnostics_dir/runner-identity.txt" 2>&1
+          if [ -e /dev/kvm ]; then
+            ls -l /dev/kvm > "$diagnostics_dir/kvm-device.txt" 2>&1
+            test -r /dev/kvm && echo readable >> "$diagnostics_dir/kvm-device.txt"
+            test -w /dev/kvm && echo writable >> "$diagnostics_dir/kvm-device.txt"
+          else
+            echo "/dev/kvm unavailable" > "$diagnostics_dir/kvm-device.txt"
+          fi
+          if command -v adb >/dev/null 2>&1; then
+            adb devices -l > "$diagnostics_dir/adb-devices-final.txt" 2>&1
+            adb get-state > "$diagnostics_dir/adb-state-final.txt" 2>&1
+            adb shell getprop > "$diagnostics_dir/emulator-getprop-final.txt" 2>&1
+            adb logcat -b all -d -t 5000 > "$diagnostics_dir/logcat-final.txt" 2>&1
+            adb shell dumpsys activity processes > "$diagnostics_dir/activity-processes-final.txt" 2>&1
+          else
+            echo "adb command unavailable" > "$diagnostics_dir/adb-unavailable.txt"
+          fi
+          ps auxww | grep -E '[e]mulator|[q]emu|[a]db' > "$diagnostics_dir/emulator-processes.txt" 2>&1
+          df -h > "$diagnostics_dir/disk-space.txt" 2>&1
+          free -h > "$diagnostics_dir/memory.txt" 2>&1
       - name: Upload Android instrumentation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
