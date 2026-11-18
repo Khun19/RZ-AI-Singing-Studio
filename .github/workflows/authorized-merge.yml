@@ -27,7 +27,7 @@ permissions:
   checks: read
 
 concurrency:
-  group: authorized-merge-\${{ inputs.pr_number }}
+  group: authorized-merge-${{ inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:
@@ -35,16 +35,16 @@ jobs:
     name: Verify explicit authorization and exact-head evidence
     runs-on: ubuntu-latest
     outputs:
-      run_id: \${{ steps.verify.outputs.run_id }}
+      run_id: ${{ steps.verify.outputs.run_id }}
     steps:
       - name: Verify actor, authorization phrase, PR identity and exact SHAs
         id: verify
         env:
-          GH_TOKEN: \${{ github.token }}
-          PR_NUMBER: \${{ inputs.pr_number }}
-          EXPECTED_HEAD_SHA: \${{ inputs.expected_head_sha }}
-          EXPECTED_BASE_SHA: \${{ inputs.expected_base_sha }}
-          AUTHORIZATION_PHRASE: \${{ inputs.authorization_phrase }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+          AUTHORIZATION_PHRASE: ${{ inputs.authorization_phrase }}
         shell: bash
         run: |
           set -euo pipefail
@@ -103,10 +103,10 @@ jobs:
     steps:
       - name: Revalidate PR immediately before merge
         env:
-          GH_TOKEN: \${{ github.token }}
-          PR_NUMBER: \${{ inputs.pr_number }}
-          EXPECTED_HEAD_SHA: \${{ inputs.expected_head_sha }}
-          EXPECTED_BASE_SHA: \${{ inputs.expected_base_sha }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -119,9 +119,9 @@ jobs:
 
       - name: Merge only the authorized head SHA
         env:
-          GH_TOKEN: \${{ github.token }}
-          PR_NUMBER: \${{ inputs.pr_number }}
-          EXPECTED_HEAD_SHA: \${{ inputs.expected_head_sha }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
         shell: bash
         run: |
           set -euo pipefail
