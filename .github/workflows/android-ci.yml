@@ -157,6 +157,20 @@ jobs:
     name: Install and launch exact APK (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
     needs: [build-debug]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM access when available
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+            test -r /dev/kvm && test -w /dev/kvm
+          else
+            echo "/dev/kvm is unavailable; emulator runner will use software fallback."
+          fi
     strategy:
       fail-fast: false
       matrix:
