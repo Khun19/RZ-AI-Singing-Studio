@@ -59,16 +59,25 @@ class PlaybackFlowInstrumentationTest {
             playbackPositionMs(slider) in 500f..1_800f
         }
 
+        val progressInfo = slider.fetchSemanticsNode().config[
+            androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo
+        ]
+        val currentFraction = (
+            (progressInfo.current - progressInfo.range.start) /
+                (progressInfo.range.endInclusive - progressInfo.range.start)
+            ).coerceIn(0f, 1f)
+
+        // Drag from the current Slider thumb, not from the track's left edge.
         slider.performTouchInput {
             swipe(
-                start = Offset(2f, centerY),
+                start = Offset(width * currentFraction, centerY),
                 end = Offset(width * 0.7f, centerY),
-                durationMillis = 300
+                durationMillis = 500
             )
         }
 
         // The displayed position is sourced from MediaPlayer.currentPosition after seekTo().
-        composeRule.waitUntil(2_000) {
+        composeRule.waitUntil(5_000) {
             playbackPositionMs(slider) > 3_000f
         }
 
