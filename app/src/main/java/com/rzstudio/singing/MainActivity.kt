@@ -355,6 +355,7 @@ private fun SingingStudioApp() {
                                     status = "Take deleted"
                                 }) { Text("Delete") }
                             }
+                            }
                             if (playingTakePath == take.absolutePath && takeDurationMs > 0) {
                                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
