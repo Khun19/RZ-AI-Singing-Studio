@@ -48,6 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "::error::Dispatch this trusted workflow from main only."; exit 1; }
           test "$GITHUB_ACTOR" = "Khun19" || { echo "::error::Only Khun19 may authorize."; exit 1; }
           [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
           [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
@@ -110,6 +111,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "::error::Merge job must run from main."; exit 1; }
           test "$GITHUB_ACTOR" = "Khun19"
           pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
           jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" \
