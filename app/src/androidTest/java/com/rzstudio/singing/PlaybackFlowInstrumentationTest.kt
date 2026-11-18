@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -53,7 +54,7 @@ class PlaybackFlowInstrumentationTest {
         slider.performTouchInput {
             swipe(
                 start = Offset(2f, centerY),
-                end = Offset(width - 2f, centerY),
+                end = Offset(width * 0.5f, centerY),
                 durationMillis = 300
             )
         }
