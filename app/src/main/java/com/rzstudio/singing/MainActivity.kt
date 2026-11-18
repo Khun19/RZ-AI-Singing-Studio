@@ -261,6 +261,7 @@ private fun SingingStudioApp() {
 
             StudioCard {
                 Text("VOCAL TAKES  •  ${takes.size}", color = StudioAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Play back or delete your recorded takes.", color = Color.LightGray, fontSize = 13.sp)
                 if (takes.isEmpty()) {
                     Text("No recordings yet.", color = Color.LightGray, fontSize = 13.sp)
                 } else {
