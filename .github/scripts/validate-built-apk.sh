@@ -28,6 +28,8 @@ test -x "$aapt"
 "$aapt" dump badging "$apk_path" > "$evidence_dir/apk-badging.txt"
 grep -q "package: name='com.rzstudio.singing'" "$evidence_dir/apk-badging.txt"
 grep -q "sdkVersion:'31'" "$evidence_dir/apk-badging.txt"
+grep -q "targetSdkVersion:'35'" "$evidence_dir/apk-badging.txt"
+"$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk_path" > "$evidence_dir/apk-signature.txt" 2>&1
 sha256sum "$apk_path" | tee "$evidence_dir/apk-sha256.txt"
 stat --printf='apk_size_bytes=%s\n' "$apk_path" > "$evidence_dir/apk-size.txt"
 adb shell getprop ro.build.version.sdk | tr -d '\r' > "$evidence_dir/emulator-api.txt"
