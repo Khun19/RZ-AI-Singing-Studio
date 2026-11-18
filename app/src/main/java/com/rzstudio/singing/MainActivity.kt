@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -77,6 +78,9 @@ private fun SingingStudioApp() {
     var selectedAudio by remember { mutableStateOf<Uri?>(null) }
     var audioName by remember { mutableStateOf("No song selected") }
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    var takePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var playingTakePath by remember { mutableStateOf<String?>(null) }
+    var isTakePlaying by remember { mutableStateOf(false) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
@@ -88,6 +92,7 @@ private fun SingingStudioApp() {
             runCatching { recorder?.stop() }
             recorder?.release()
             player?.release()
+            takePlayer?.release()
         }
     }
 
@@ -269,11 +274,62 @@ private fun SingingStudioApp() {
                                 Text(take.name, color = Color.White, fontSize = 13.sp)
                                 Text("${take.length() / 1024} KB", color = Color.Gray, fontSize = 11.sp)
                             }
-                            Button(onClick = {
-                                TakeStore.delete(take)
-                                takes = TakeStore.list(context)
-                                status = "Take deleted"
-                            }) { Text("Delete") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Button(onClick = {
+                                    try {
+                                        if (playingTakePath == take.absolutePath && isTakePlaying) {
+                                            takePlayer?.pause()
+                                            isTakePlaying = false
+                                            status = "Take paused"
+                                        } else if (playingTakePath == take.absolutePath && takePlayer != null) {
+                                            takePlayer?.start()
+                                            isTakePlaying = true
+                                            status = "Playing recorded take"
+                                        } else {
+                                            takePlayer?.release()
+                                            takePlayer = MediaPlayer.create(context, Uri.fromFile(take))
+                                            if (takePlayer == null) {
+                                                status = "This recording could not be played"
+                                            } else {
+                                                playingTakePath = take.absolutePath
+                                                takePlayer?.setOnCompletionListener {
+                                                    isTakePlaying = false
+                                                    playingTakePath = null
+                                                    takePlayer?.release()
+                                                    takePlayer = null
+                                                    status = "Take playback completed"
+                                                }
+                                                takePlayer?.start()
+                                                isTakePlaying = true
+                                                status = "Playing recorded take"
+                                            }
+                                        }
+                                    } catch (_: Exception) {
+                                        takePlayer?.release()
+                                        takePlayer = null
+                                        playingTakePath = null
+                                        isTakePlaying = false
+                                        status = "Take playback failed"
+                                    }
+                                }) {
+                                    androidx.compose.material3.Icon(
+                                        if (playingTakePath == take.absolutePath && isTakePlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = null
+                                    )
+                                    Text(if (playingTakePath == take.absolutePath && isTakePlaying) "Pause" else "Play")
+                                }
+                                Button(onClick = {
+                                    if (playingTakePath == take.absolutePath) {
+                                        takePlayer?.release()
+                                        takePlayer = null
+                                        playingTakePath = null
+                                        isTakePlaying = false
+                                    }
+                                    TakeStore.delete(take)
+                                    takes = TakeStore.list(context)
+                                    status = "Take deleted"
+                                }) { Text("Delete") }
+                            }
                         }
                     }
                 }
