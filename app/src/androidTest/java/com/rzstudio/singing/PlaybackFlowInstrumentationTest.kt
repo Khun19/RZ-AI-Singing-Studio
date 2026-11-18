@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.swipe
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertTrue
@@ -49,6 +50,7 @@ class PlaybackFlowInstrumentationTest {
         composeRule.onNodeWithText("Play").performClick()
 
         val slider = composeRule.onNodeWithTag("take_seek_slider")
+        slider.performScrollTo()
         slider.assertIsDisplayed()
 
         // Confirm the real MediaPlayer advances before any user seek action.
@@ -99,6 +101,7 @@ class PlaybackFlowInstrumentationTest {
             composeRule.onAllNodesWithText(seededTake.name)
                 .fetchSemanticsNodes().isNotEmpty()
         }
+        composeRule.onNodeWithText(seededTake.name).performScrollTo()
         composeRule.onNodeWithText(seededTake.name).assertIsDisplayed()
         assertTrue("Take must remain in private storage after recreation",
             TakeStore.list(context).any { it.name == seededTake.name })
