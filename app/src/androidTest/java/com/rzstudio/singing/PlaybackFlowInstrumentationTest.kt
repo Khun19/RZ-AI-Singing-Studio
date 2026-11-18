@@ -1,6 +1,7 @@
 package com.rzstudio.singing
 
 import android.content.Context
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -18,12 +19,9 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
-import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.sin
 
 class PlaybackFlowInstrumentationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
@@ -36,7 +34,7 @@ class PlaybackFlowInstrumentationTest {
                 override fun evaluate() {
                     TakeStore.list(context).forEach { TakeStore.delete(it) }
                     seededTake = TakeStore.newTakeFile(context)
-                    writeTestWav(seededTake, durationSeconds = 6)
+                    writeTestM4aFixture(seededTake)
                     base.evaluate()
                 }
             }
@@ -95,9 +93,15 @@ class PlaybackFlowInstrumentationTest {
     @Test
     fun takeRemainsAvailableAfterActivityRecreation() {
         composeRule.onNodeWithText(seededTake.name).assertIsDisplayed()
+        assertTrue("Take must remain in private storage before recreation", seededTake.exists())
         composeRule.activityRule.scenario.recreate()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithText(seededTake.name)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText(seededTake.name).assertIsDisplayed()
-        assert(TakeStore.list(context).any { it.name == seededTake.name })
+        assertTrue("Take must remain in private storage after recreation",
+            TakeStore.list(context).any { it.name == seededTake.name })
     }
 
     @Test
@@ -114,42 +118,11 @@ class PlaybackFlowInstrumentationTest {
         androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo
     ].current
 
-    private fun writeTestWav(file: File, durationSeconds: Int) {
-        val sampleRate = 44_100
-        val channels = 1
-        val bitsPerSample = 16
-        val sampleCount = sampleRate * durationSeconds
-        val dataSize = sampleCount * channels * bitsPerSample / 8
-        BufferedOutputStream(FileOutputStream(file)).use { output ->
-            output.write("RIFF".toByteArray(Charsets.US_ASCII))
-            writeIntLe(output, 36 + dataSize)
-            output.write("WAVE".toByteArray(Charsets.US_ASCII))
-            output.write("fmt ".toByteArray(Charsets.US_ASCII))
-            writeIntLe(output, 16)
-            writeShortLe(output, 1)
-            writeShortLe(output, channels)
-            writeIntLe(output, sampleRate)
-            writeIntLe(output, sampleRate * channels * bitsPerSample / 8)
-            writeShortLe(output, channels * bitsPerSample / 8)
-            writeShortLe(output, bitsPerSample)
-            output.write("data".toByteArray(Charsets.US_ASCII))
-            writeIntLe(output, dataSize)
-            repeat(sampleCount) { index ->
-                val sample = (sin(2.0 * PI * 440.0 * index / sampleRate) * 12_000).toInt()
-                writeShortLe(output, sample)
-            }
+    private fun writeTestM4aFixture(file: File) {
+        val testContext = InstrumentationRegistry.getInstrumentation().context
+        testContext.assets.open("playback_fixture.m4a").use { input ->
+            FileOutputStream(file).use { output -> input.copyTo(output) }
         }
     }
 
-    private fun writeIntLe(output: BufferedOutputStream, value: Int) {
-        output.write(value and 0xff)
-        output.write((value shr 8) and 0xff)
-        output.write((value shr 16) and 0xff)
-        output.write((value shr 24) and 0xff)
-    }
-
-    private fun writeShortLe(output: BufferedOutputStream, value: Int) {
-        output.write(value and 0xff)
-        output.write((value shr 8) and 0xff)
-    }
 }
