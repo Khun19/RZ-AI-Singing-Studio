@@ -16,8 +16,8 @@ class SingingStudioSmokeTest {
         composeRule.onNodeWithText("Singing Studio").assertIsDisplayed()
         composeRule.onNodeWithText("Import song").assertIsDisplayed()
         composeRule.onNodeWithText("RECORDING STUDIO").assertIsDisplayed()
-        composeRule.onNodeWithText("VOCAL RECORDING").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Record vocal take").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("VOCAL TAKES").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("VOCAL RECORDING", substring = true).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Record vocal take", substring = true).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("VOCAL TAKES", substring = true).performScrollTo().assertIsDisplayed()
     }
 }
