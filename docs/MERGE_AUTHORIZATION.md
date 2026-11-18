@@ -16,7 +16,7 @@ After the PR is ready and all evidence exists:
    MERGE-PR-<number>-<full-head-sha>
 4. Dispatch. A successful run authorizes and merges only that exact revision.
 
-Only Khun19 is permitted to dispatch. The workflow checks the PR is open, non-draft, targets main, belongs to this repository, and still matches both supplied SHAs. It then checks the latest Android CI run for that PR/head, every job conclusion, and required unexpired APK/test evidence artifacts. Immediately before merge it rechecks the PR and uses GitHub's expected-head-SHA merge precondition.
+Only Khun19 is permitted to dispatch, and the workflow refuses to run unless the selected workflow ref is the trusted `main` branch. The workflow checks the PR is open, non-draft, targets main, belongs to this repository, and still matches both supplied SHAs. It then checks the latest Android CI run for that PR/head, every job conclusion, and required unexpired APK/test evidence artifacts. Immediately before merge it rechecks the PR and uses GitHub's expected-head-SHA merge precondition.
 
 ## Evidence requirements
 
