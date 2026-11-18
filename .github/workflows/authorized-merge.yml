@@ -79,8 +79,7 @@ jobs:
             and ([.jobs[].name] | index("JVM unit tests") != null)
             and ([.jobs[].name] | index("Android emulator instrumentation tests") != null)
             and ([.jobs[].name] | index("Build debug APK") != null)
-            and ([.jobs[].name] | index("Install and launch exact APK (API 31)") != null)
-            and ([.jobs[].name] | index("Install and launch exact APK (API 35)") != null)
+            and ([.jobs[].name] | map(select(startswith("Install and launch exact APK (API "))) | length == 2)
           ' <<<"$jobs" >/dev/null
 
           artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")"
