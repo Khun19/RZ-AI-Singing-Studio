@@ -14,7 +14,7 @@ capture_failure() {
   timeout --signal=TERM --kill-after=3s 12s adb shell getprop > "$diagnostics_dir/emulator-getprop.txt" 2>&1
   timeout --signal=TERM --kill-after=3s 12s adb logcat -b all -d -t 5000 > "$diagnostics_dir/logcat.txt" 2>&1
   timeout --signal=TERM --kill-after=3s 12s adb shell dumpsys activity processes > "$diagnostics_dir/activity-processes.txt" 2>&1
-  printf '%s\\n' "$exit_code" > "$diagnostics_dir/gradle-exit-code.txt"
+  printf '%s\n' "$exit_code" > "$diagnostics_dir/gradle-exit-code.txt"
   exit "$exit_code"
 }
 trap capture_failure ERR
@@ -22,24 +22,24 @@ trap capture_failure ERR
 timeout 90s adb wait-for-device
 
 for attempt in $(seq 1 60); do
-  device_state="$(adb get-state 2>/dev/null || true)"
-  boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+  device_state="$(timeout --signal=TERM --kill-after=2s 8s adb get-state 2>/dev/null || true)"
+  boot_completed="$(timeout --signal=TERM --kill-after=2s 8s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
   if [[ "$device_state" == "device" && "$boot_completed" == "1" ]]; then
     break
   fi
   sleep 2
 done
 
-[[ "$(adb get-state)" == "device" ]]
-[[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == "1" ]]
+[[ "$(timeout --signal=TERM --kill-after=2s 8s adb get-state)" == "device" ]]
+[[ "$(timeout --signal=TERM --kill-after=2s 8s adb shell getprop sys.boot_completed | tr -d '\r')" == "1" ]]
 
 for attempt in $(seq 1 30); do
-  if adb shell cmd package list packages >/dev/null 2>&1; then
+  if timeout --signal=TERM --kill-after=2s 8s adb shell cmd package list packages >/dev/null 2>&1; then
     break
   fi
   sleep 2
 done
-adb shell cmd package list packages >/dev/null
+timeout --signal=TERM --kill-after=2s 8s adb shell cmd package list packages >/dev/null
 
 # Generate a real AAC/M4A fixture. The app stores recordings as AAC in an MP4 container;
 # a WAV file renamed to .m4a would test the wrong format and make MediaPlayer reject it.
