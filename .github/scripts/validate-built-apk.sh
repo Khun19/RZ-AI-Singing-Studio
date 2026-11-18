@@ -48,8 +48,10 @@ done
 adb shell pidof com.rzstudio.singing | tee "$evidence_dir/app-process.txt"
 adb shell dumpsys activity activities > "$evidence_dir/activity-state.txt"
 grep -q "com.rzstudio.singing" "$evidence_dir/activity-state.txt"
-adb shell screencap -p /sdcard/rz-ai-singing-studio.png
-adb pull /sdcard/rz-ai-singing-studio.png "$evidence_dir/launch-screenshot.png"
+# Stream the screenshot over ADB instead of writing to shared storage.
+# Android 35 may deny shell writes to the shared-storage root.
+adb exec-out screencap -p > "$evidence_dir/launch-screenshot.png"
+test -s "$evidence_dir/launch-screenshot.png"
 adb logcat -b crash -d > "$evidence_dir/crash-log.txt"
 if grep -E "FATAL EXCEPTION|Fatal signal" "$evidence_dir/crash-log.txt"; then
   echo "Crash log contains a fatal error" >&2
