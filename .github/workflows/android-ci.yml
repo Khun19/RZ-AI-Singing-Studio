@@ -133,11 +133,11 @@ jobs:
             echo "/dev/kvm unavailable" > "$diagnostics_dir/kvm-device.txt"
           fi
           if command -v adb >/dev/null 2>&1; then
-            adb devices -l > "$diagnostics_dir/adb-devices-final.txt" 2>&1
-            adb get-state > "$diagnostics_dir/adb-state-final.txt" 2>&1
-            adb shell getprop > "$diagnostics_dir/emulator-getprop-final.txt" 2>&1
-            adb logcat -b all -d -t 5000 > "$diagnostics_dir/logcat-final.txt" 2>&1
-            adb shell dumpsys activity processes > "$diagnostics_dir/activity-processes-final.txt" 2>&1
+            timeout --signal=TERM --kill-after=3s 12s adb devices -l > "$diagnostics_dir/adb-devices-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb get-state > "$diagnostics_dir/adb-state-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb shell getprop > "$diagnostics_dir/emulator-getprop-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb logcat -b all -d -t 5000 > "$diagnostics_dir/logcat-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb shell dumpsys activity processes > "$diagnostics_dir/activity-processes-final.txt" 2>&1 || true
           else
             echo "adb command unavailable" > "$diagnostics_dir/adb-unavailable.txt"
           fi
@@ -242,11 +242,11 @@ jobs:
             echo "/dev/kvm unavailable" > "$diagnostics_dir/kvm-device.txt"
           fi
           if command -v adb >/dev/null 2>&1; then
-            adb devices -l > "$diagnostics_dir/adb-devices-final.txt" 2>&1
-            adb get-state > "$diagnostics_dir/adb-state-final.txt" 2>&1
-            adb shell getprop > "$diagnostics_dir/emulator-getprop-final.txt" 2>&1
-            adb logcat -b all -d -t 5000 > "$diagnostics_dir/logcat-final.txt" 2>&1
-            adb shell dumpsys activity processes > "$diagnostics_dir/activity-processes-final.txt" 2>&1
+            timeout --signal=TERM --kill-after=3s 12s adb devices -l > "$diagnostics_dir/adb-devices-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb get-state > "$diagnostics_dir/adb-state-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb shell getprop > "$diagnostics_dir/emulator-getprop-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb logcat -b all -d -t 5000 > "$diagnostics_dir/logcat-final.txt" 2>&1 || true
+            timeout --signal=TERM --kill-after=3s 12s adb shell dumpsys activity processes > "$diagnostics_dir/activity-processes-final.txt" 2>&1 || true
           else
             echo "adb command unavailable" > "$diagnostics_dir/adb-unavailable.txt"
           fi
