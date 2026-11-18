@@ -35,9 +35,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import java.io.File
+import kotlinx.coroutines.delay
 
 private val StudioBackground = Color(0xFF090B10)
 private val StudioSurface = Color(0xFF171B24)
@@ -81,11 +84,24 @@ private fun SingingStudioApp() {
     var takePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var playingTakePath by remember { mutableStateOf<String?>(null) }
     var isTakePlaying by remember { mutableStateOf(false) }
+    var takePositionMs by remember { mutableStateOf(0f) }
+    var takeDurationMs by remember { mutableStateOf(0) }
+    var isTakeSeeking by remember { mutableStateOf(false) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Ready") }
     var takes by remember { mutableStateOf(TakeStore.list(context)) }
+
+    LaunchedEffect(takePlayer, isTakePlaying) {
+        while (true) {
+            val activePlayer = takePlayer
+            if (activePlayer != null && !isTakeSeeking) {
+                runCatching { takePositionMs = activePlayer.currentPosition.toFloat() }
+            }
+            delay(200)
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -266,11 +282,15 @@ private fun SingingStudioApp() {
                     Text("No recordings yet.", color = Color.LightGray, fontSize = 13.sp)
                 } else {
                     takes.forEach { take ->
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(take.name, color = Color.White, fontSize = 13.sp)
                                 Text("${take.length() / 1024} KB", color = Color.Gray, fontSize = 11.sp)
@@ -293,9 +313,13 @@ private fun SingingStudioApp() {
                                                 status = "This recording could not be played"
                                             } else {
                                                 playingTakePath = take.absolutePath
+                                                takeDurationMs = takePlayer?.duration ?: 0
+                                                takePositionMs = 0f
                                                 takePlayer?.setOnCompletionListener {
                                                     isTakePlaying = false
                                                     playingTakePath = null
+                                                    takePositionMs = 0f
+                                                    takeDurationMs = 0
                                                     takePlayer?.release()
                                                     takePlayer = null
                                                     status = "Take playback completed"
@@ -330,6 +354,25 @@ private fun SingingStudioApp() {
                                     takes = TakeStore.list(context)
                                     status = "Take deleted"
                                 }) { Text("Delete") }
+                            }
+                            if (playingTakePath == take.absolutePath && takeDurationMs > 0) {
+                                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(formatPlaybackTime(takePositionMs.toInt()), color = Color.LightGray, fontSize = 11.sp)
+                                        Text(formatPlaybackTime(takeDurationMs), color = Color.LightGray, fontSize = 11.sp)
+                                    }
+                                    Slider(
+                                        value = takePositionMs.coerceIn(0f, takeDurationMs.toFloat()),
+                                        onValueChange = { value -> isTakeSeeking = true; takePositionMs = value },
+                                        onValueChangeFinished = {
+                                            runCatching { takePlayer?.seekTo(takePositionMs.toInt()) }
+                                            isTakeSeeking = false
+                                        },
+                                        valueRange = 0f..takeDurationMs.toFloat(),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Text("Drag the timeline to jump to any position.", color = Color.Gray, fontSize = 11.sp)
+                                }
                             }
                         }
                     }
@@ -387,4 +430,9 @@ internal object TakeStore {
         if (parent.name != "recordings") return false
         return file.delete()
     }
+}
+
+internal fun formatPlaybackTime(milliseconds: Int): String {
+    val totalSeconds = milliseconds.coerceAtLeast(0) / 1000
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
