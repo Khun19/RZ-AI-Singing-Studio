@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -370,7 +371,7 @@ private fun SingingStudioApp() {
                                             isTakeSeeking = false
                                         },
                                         valueRange = 0f..takeDurationMs.toFloat(),
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth().testTag("take_seek_slider")
                                     )
                                     Text("Drag the timeline to jump to any position.", color = Color.Gray, fontSize = 11.sp)
                                 }
