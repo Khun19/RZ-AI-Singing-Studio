@@ -19,5 +19,6 @@ class SingingStudioSmokeTest {
         composeRule.onNodeWithText("VOCAL RECORDING", substring = true).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Record vocal take", substring = true).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("VOCAL TAKES", substring = true).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Play back or delete your recorded takes.").performScrollTo().assertIsDisplayed()
     }
 }
