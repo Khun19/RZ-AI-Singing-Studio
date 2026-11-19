@@ -220,6 +220,7 @@ Known high-risk areas to manage explicitly:
 - Music-generation rights and model/data provenance.
 - Cloud GPU cost, provider retention and user consent.
 - Low-storage recovery and non-destructive project history.
+- Recording-file identity and durability: the current MVP names takes with millisecond timestamps; before concurrent, multi-take or recovery workflows, use collision-resistant unique IDs and test atomic file creation/save behavior.
 - Complete build-to-artifact provenance and release signing.
 
 ## 9. Definition of Done
