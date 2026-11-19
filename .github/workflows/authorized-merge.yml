@@ -72,15 +72,66 @@ jobs:
           jq -e '.status == "completed" and .conclusion == "success"' <<<"$selected" >/dev/null
           run_id="$(jq -r '.id' <<<"$selected")"
 
-          jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100")"
-          jq -e '
+          # Reuse the same predicate for positive and negative fixture tests.
+          job_filter='
             (.jobs | length > 0)
             and all(.jobs[]; .status == "completed" and .conclusion == "success")
             and ([.jobs[].name] | index("JVM unit tests") != null)
             and ([.jobs[].name] | index("Android emulator instrumentation tests") != null)
             and ([.jobs[].name] | index("Build debug APK") != null)
+            and ([.jobs[].name] | index("Install and launch exact APK (API 31)") != null)
+            and ([.jobs[].name] | index("Install and launch exact APK (API 35)") != null)
             and ([.jobs[].name] | map(select(startswith("Install and launch exact APK (API "))) | length == 2)
-          ' <<<"$jobs" >/dev/null
+          '
+
+          valid_fixture="$(jq -n '[
+            "JVM unit tests",
+            "Android emulator instrumentation tests",
+            "Build debug APK",
+            "Install and launch exact APK (API 31)",
+            "Install and launch exact APK (API 35)"
+          ] | {jobs: map({name: ., status: "completed", conclusion: "success"})}')"
+          jq -e "$job_filter" <<<"$valid_fixture" >/dev/null
+
+          missing_api35="$(jq -n '[
+            "JVM unit tests",
+            "Android emulator instrumentation tests",
+            "Build debug APK",
+            "Install and launch exact APK (API 31)"
+          ] | {jobs: map({name: ., status: "completed", conclusion: "success"})}')"
+          if jq -e "$job_filter" <<<"$missing_api35" >/dev/null 2>&1; then
+            echo "::error::Negative test failed: missing API 35 job was accepted."
+            exit 1
+          fi
+
+          failed_api35="$(jq -n '[
+            {name:"JVM unit tests",status:"completed",conclusion:"success"},
+            {name:"Android emulator instrumentation tests",status:"completed",conclusion:"success"},
+            {name:"Build debug APK",status:"completed",conclusion:"success"},
+            {name:"Install and launch exact APK (API 31)",status:"completed",conclusion:"success"},
+            {name:"Install and launch exact APK (API 35)",status:"completed",conclusion:"failure"}
+          ] | {jobs:.}')"
+          if jq -e "$job_filter" <<<"$failed_api35" >/dev/null 2>&1; then
+            echo "::error::Negative test failed: failed API 35 job was accepted."
+            exit 1
+          fi
+
+          extra_api_job="$(jq -n '[
+            "JVM unit tests",
+            "Android emulator instrumentation tests",
+            "Build debug APK",
+            "Install and launch exact APK (API 31)",
+            "Install and launch exact APK (API 35)",
+            "Install and launch exact APK (API 36)"
+          ] | {jobs: map({name: ., status: "completed", conclusion: "success"})}')"
+          if jq -e "$job_filter" <<<"$extra_api_job" >/dev/null 2>&1; then
+            echo "::error::Negative test failed: unexpected API matrix job was accepted."
+            exit 1
+          fi
+          echo "Merge-gate job predicate tests passed (1 positive, 3 negative)."
+
+          jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100")"
+          jq -e "$job_filter" <<<"$jobs" >/dev/null
 
           artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")"
           jq -e '
