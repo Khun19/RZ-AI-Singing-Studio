@@ -114,7 +114,10 @@ Use these documents in this order:
 2. **Requirements:** defines the user-selected feature behavior and approved product scope.
 3. **Architecture:** defines technical boundaries, component responsibilities, data flows and verification strategy.
 4. **Architecture Decision Records (ADRs):** record evidence-backed choices of engines, libraries, models, providers and trade-offs.
-5. **Roadmap / Issues / Pull Requests:** define the current execution order and individual work items.
+5. **Roadmap / Issues / Pull Requests:** define the current execution order and individual work items.5. **Feature Traceability Matrix:** maps each approved feature to implementation status, acceptance criteria and required evidence.  
+6. **Development Workflow:** defines readiness, implementation sequence, PR lifecycle, test layers, stop conditions and Definition of Done.  
+7. **Architecture Decision Records (ADRs):** record evidence-backed technology choices using the [ADR template](adr/0000-template.md).  
+8. **Roadmap / Issues / Pull Requests:** define the current execution order and individual work items.
 
 A lower-level document or implementation must not silently redefine a higher-level product decision. If documents conflict, stop the affected work, identify the conflict and reconcile the documents before implementation.
 
