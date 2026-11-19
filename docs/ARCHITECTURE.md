@@ -122,6 +122,10 @@ Processing stages are non-destructive and independently testable:
 - AI-assisted balance, timing alignment where possible, peak/clipping control, Auto Mix and Auto Mastering.
 - Preview and A/B comparison; allow per-change accept/reject and Undo/Redo while preserving the original take.
 
+**Live enhancement and monitoring path:** microphone capture feeds a bounded, low-latency processing chain before the monitoring output. The capture/audio callback must do only predictable, deadline-bounded work: no disk/network I/O, blocking locks, UI work, unbounded allocations or model inference with unknown latency. Expensive AI analysis runs off the real-time callback; it may publish parameters or frames to the audio engine through bounded, thread-safe handoff. The audio engine applies only validated parameters at safe buffer boundaries. The live chain must cover the approved live requirements (noise reduction, automatic level control, clarity enhancement and restrained pitch correction) where device benchmarks prove the latency and stability budget. Post-recording enhancement is a separate path and does not satisfy the live requirement by itself.
+
+When a device or model cannot meet the measured real-time budget, bypass the unsupported live effect or use a tested lighter DSP fallback while keeping recording stable; disclose the limitation and retain the unprocessed original. Never let an AI stall or monitoring route failure interrupt microphone capture. Define and measure callback deadline misses, end-to-end monitoring latency, glitches, CPU, memory, battery and thermal behavior on representative API 31+ devices before accepting a live effect.
+
 Live singing feedback must not interrupt capture. Analyze pitch, timing, rhythm, volume and voice quality asynchronously or through bounded real-time work that cannot block the audio callback.
 
 ### 4.7 Export and local library
@@ -172,7 +176,8 @@ This status reflects the known early MVP baseline, not a live claim about the la
 |---|---|---|
 | Android Kotlin/Jetpack Compose app shell | Implemented in MVP; full studio UI not verified | Existing Android application source |
 | Local audio selection via SAF | Implemented in MVP | Existing import path; verify on supported API/device |
-| Basic audio preview | Implemented in MVP | MediaPlayer path and existing playback/seek/pause instrumentation coverage |
+| Imported-song preview | Implemented in MVP; dedicated preview acceptance not yet verified | MediaPlayer play/pause path exists; current playback instrumentation tests recorded-take playback, not imported-song preview. The current imported-song preview has no verified seek control. |
+| Recorded-take playback/seek/pause | Implemented in MVP | PlaybackFlowInstrumentationTest exercises a seeded recorded M4A take, including playback, seek, pause/resume and completion |
 | Microphone AAC/M4A recording | Implemented in MVP | MediaRecorder captures mic only |
 | Local take list and deletion | Implemented in MVP | TakeStore/local storage tests |
 | Synchronized backing + mic recording/mixing | Not implemented | Requires audio-engine design and feature acceptance |
@@ -195,14 +200,17 @@ Every feature must have a traceable requirement, test plan and evidence record. 
 
 | Requirement area | Required verification |
 |---|---|
-| Import/playback | SAF permission/persistence, supported formats, playback, seek, pause/resume, route change and error handling |
+| Import and imported-song preview | SAF permission/persistence, supported formats, selected-source preview start/pause/resume, completion, error handling and route changes; test preview separately from recorded-take playback and do not claim seek until implemented and tested |
+| Recorded-take playback | Recorded M4A playback, seek, pause/resume, completion, persistence after activity recreation and deletion; identify the exact take fixture and test artifact |
 | Synchronized recording | Track start alignment, drift over full-song duration, dropped frames/glitches, final alignment, mixed output and repeatability |
 | Recording lifecycle | One-take/multi-take/punch-in, background/screen-off, call interruption, manual resume, process death, recovery and low-storage behavior |
 | Lyrics | Source/license checks, Burmese recognition quality, line segmentation, timing error, uncertainty labels and manual correction |
 | Vocal separation | Licensed model provenance, vocal/instrumental quality, artifacts, runtime, memory, latency and low-tier fallback |
 | Cover generation | New arrangement rather than stem extraction, melody/structure preservation mode, instrument/style controls, quality and rights review |
-| Vocal processing/producer | Naturalness, clipping/peak behavior, A/B output, per-change acceptance, Undo/Redo and original preservation |
+| Vocal processing/producer | Naturalness, clipping/peak behavior, A/B output, per-change acceptance, Undo/Redo and original preservation; separately verify real-time effects on the live monitoring path and post-recording effects |
+| Live enhancement/audio engine | Callback deadline misses, processing-buffer underruns, end-to-end monitoring latency, capture continuity, effect bypass/fallback, CPU/memory/battery/thermal behavior and voice quality across representative device tiers |
 | Monitoring | Wired and Bluetooth route detection, latency, feedback risk, route switching and manual offset |
+| Singing feedback and performance scoring | Non-interrupting feedback; overall, pitch, timing, rhythm and voice-quality scores; score consistency/repeatability; history comparison; actionable tips; handling of low-confidence or unavailable analysis |
 | Export | Format/codec validity, metadata, sample/bit-depth truthfulness, no fake upsampling and audio playback in external players |
 | Library/storage | Persistence, folder/move/rename, title search, sharing, low-space warning and confirmed deletion |
 | Cloud path | Consent before upload, accurate data/cost/retention disclosure, cancellation, failure behavior and local alternative |
