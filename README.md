@@ -6,7 +6,7 @@ The product goal is to let users sing along with music, create karaoke arrangeme
 
 > **Project status:** Early Android MVP. The feature set below is the approved product direction, not a claim that every feature has been implemented or validated.
 >
-> **Product north star:** [Product Vision & Mission](docs/PRODUCT_VISION_AND_MISSION.md) defines the product goal, user outcome, scope boundaries and change-control rules. The [Requirements](docs/KARAOKE_AI_SINGING_STUDIO_REQUIREMENTS.md) define approved feature behavior; the [Architecture](docs/ARCHITECTURE.md) defines the technical design.
+> **Product north star:** [Product Vision & Mission](docs/PRODUCT_VISION_AND_MISSION.md) defines the product goal, user outcome, scope boundaries and change-control rules. The [Requirements](docs/KARAOKE_AI_SINGING_STUDIO_REQUIREMENTS.md) define approved feature behavior; the [Architecture](docs/ARCHITECTURE.md) defines the technical design. The [Feature Traceability Matrix](docs/FEATURE_TRACEABILITY_MATRIX.md) maps every approved feature to status and acceptance evidence; the [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md) defines gated delivery; and the [ADR template](docs/adr/0000-template.md) standardizes technical decisions.
 
 ## Product principles
 
