@@ -17,12 +17,12 @@ Merge eligible pull requests without a person manually approving or dispatching 
 The active `Singing Music` ruleset remains authoritative. It currently requires:
 
 - Strict required status checks: Gradle Wrapper bootstrap, JVM unit tests, Android emulator instrumentation tests, debug APK build, exact APK install/launch on API 31, and exact APK install/launch on API 35.
-- Copilot code review rule.
+- Automatic Copilot code review requests on pushes (availability depends on the author's Copilot access and AI credits; this is not a human approval requirement).
 - All review threads resolved.
 - Linear history and squash-only merge.
 - No force-push or branch deletion.
 
-The ruleset currently sets required human approving reviews to zero. This is intentional: human approval is not a merge prerequisite. The Copilot review rule and required CI checks remain enforced. Do not disable or bypass these safeguards merely to make a PR merge.
+The ruleset currently sets required human approving reviews to zero. This is intentional: human approval is not a merge prerequisite. Copilot review is automatically requested by the ruleset, while required CI checks and review-thread resolution are actual merge gates. Do not disable or bypass these safeguards merely to make a PR merge.
 
 ## Fail-closed behavior
 
