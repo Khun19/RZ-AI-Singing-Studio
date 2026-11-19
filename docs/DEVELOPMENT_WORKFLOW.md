@@ -99,17 +99,17 @@ AI inference must not block the audio callback. Use a measured, deterministic fa
 
 **Exit gate:** recording remains stable while monitoring/effects are active; latency, quality, power and thermal criteria pass.
 
-### Stage 5 — Lyrics pipeline
-
-Build authorized source lookup, audio recognition, missing-word inference, Burmese spelling/segmentation, confidence labels, line timing, manual correction and playback synchronization.
-
-**Exit gate:** a rights-cleared evaluation set demonstrates declared language and timing performance; uncertain words remain visibly uncertain.
-
-### Stage 6 — Vocal separation for karaoke backing
+### Stage 5 — Vocal separation for karaoke backing
 
 Evaluate model provenance, commercial license, quality, artifacts, runtime, memory, storage, thermal impact and low-tier fallbacks. Keep separation output distinct from generated cover arrangements.
 
 **Exit gate:** model and data rights are cleared and output-quality/performance acceptance passes on declared device tiers.
+
+### Stage 6 — Lyrics pipeline
+
+Build authorized source lookup, audio recognition, missing-word inference, Burmese spelling/segmentation, confidence labels, line timing, manual correction and playback synchronization.
+
+**Exit gate:** a rights-cleared evaluation set demonstrates declared language and timing performance; uncertain words remain visibly uncertain.
 
 ### Stage 7 — Post-recording production
 
