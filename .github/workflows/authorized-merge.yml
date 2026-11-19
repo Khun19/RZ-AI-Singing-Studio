@@ -87,6 +87,7 @@ jobs:
 
           valid_fixture="$(jq -n '[
             "JVM unit tests",
+            "Generate Gradle Wrapper bootstrap files",
             "Android emulator instrumentation tests",
             "Build debug APK",
             "Install and launch exact APK (API 31)",
