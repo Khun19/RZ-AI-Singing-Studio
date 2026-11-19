@@ -33,7 +33,7 @@ class PlaybackFlowInstrumentationTest {
         override fun apply(base: Statement, description: Description): Statement =
             object : Statement() {
                 override fun evaluate() {
-                    TakeStore.list(context).forEach { TakeStore.delete(it) }
+                    TakeStore.list(context).forEach { TakeStore.delete(it, File(context.filesDir, "recordings")) }
                     seededTake = TakeStore.newTakeFile(context)
                     writeTestM4aFixture(seededTake)
                     base.evaluate()
