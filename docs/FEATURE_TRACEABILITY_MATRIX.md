@@ -32,7 +32,7 @@ Only the final **Verified working** status means feature acceptance. CI pass, so
 | REC-002 | Recording modes | One-Take, Multi-Take and Punch-In | Planned — not implemented | Mode-specific session transitions, segment boundaries, take selection, punch range accuracy and non-destructive original preservation |
 | REC-003 | Live voice enhancement | During singing, provide natural noise reduction, auto level, clarity and restrained pitch correction | Planned — not implemented | Live monitoring path, callback deadlines, latency, glitches, voice naturalness, bypass/fallback and capture continuity |
 | MON-001 | Smart monitoring | Headphones enable monitoring; without headphones, reduce echo/feedback risk | Planned — not implemented | Wired/headphone route detection, speaker feedback-risk behavior, manual override, route changes and safe default |
-| MON-002 | Bluetooth monitoring | Detect Bluetooth route, estimate/compensate latency and allow manual adjustment | Planned — not implemented | Measure route-specific latency and drift; reconnect/route-switch behavior; disclose residual latency; never claim zero latency |
+| MON-002 | Bluetooth monitoring | Detect Bluetooth route, estimate/compensate latency and allow manual adjustment | Planned — not implemented | Measure route-specific monitoring latency and drift; keep monitoring latency distinct from final recorded-track alignment; reconnect/route-switch behavior; disclose residual latency; never claim zero latency |
 | LIFE-001 | Background recording | Continue recording with screen off using compliant Android foreground microphone service | Planned — not implemented | API 31+ permission/service behavior, visible notification, background-start restrictions, screen-off continuity and process lifecycle |
 | LIFE-002 | Call interruption | Automatically pause and preserve take on incoming call; require manual resume | Planned — not implemented | Simulated call/audio-focus interruption, saved segment integrity, no automatic resume, manual resume and repeated interruptions |
 | LIFE-003 | Autosave and recovery | Segment autosave, recover drafts after crash/restart, preserve segments if merge fails | Planned — not implemented | Forced process death/restart, partial/corrupt segment handling, merge failure, low storage, draft continuation and original preservation |
@@ -45,13 +45,13 @@ Only the final **Verified working** status means feature acceptance. CI pass, so
 | MIX-001 | Auto Mix and Auto Mastering | Balance vocal/music, align where possible, control peaks and master the final audio | Planned — not implemented | Loudness/peak targets declared in advance, clipping, alignment, codec validity, A/B preview and repeatable output |
 | COACH-001 | Singing feedback and scoring | Non-interruptive pitch/timing/rhythm/volume/voice-quality feedback, overall and component scores, history and tips | Planned — not implemented | Feedback does not interrupt capture; score definitions and repeatability, history comparison, actionable tips and low-confidence handling |
 | COVER-001 | AI cover modes | Original Melody Preservation and AI Creative Cover create a new arrangement/re-performance | Planned — not implemented | Prove new arrangement rather than stem extraction; melody/chord/tempo/structure behavior, rights and model provenance |
-| COVER-002 | Cover controls | User-selected instruments, styles, tempo/BPM and key controls | Planned — not implemented | Every exposed option changes the generated result as specified; unsupported instrument/device cases disclosed |
+| COVER-002 | Cover controls | User-selected acoustic/classical/electric guitar, piano/keyboard, strings, drums/percussion, bass, flute/saxophone and supported Myanmar traditional instruments; styles, tempo/BPM and key controls | Planned — not implemented | Validate Original, Acoustic/Unplugged, Romantic/Soft, Pop/Modern, Rock/Alternative, Jazz/Blues, Classical, Cinematic/Orchestral, Lo-fi/Chill, Ambient, Traditional Myanmar and Custom; verify tempo/key options and disclose unsupported instrument/device cases |
 | COVER-003 | Whole-song cover generation | Whole-song generation, Standard/High/Studio quality, final-only preview and local version history | Planned — not implemented | Full-song continuity, quality truthfulness, regeneration, settings lineage, playback and version deletion |
-| EXP-001 | Audio export | Audio-only MP3/AAC/WAV with only supported bitrate/sample/bit-depth/channel controls | Planned — not implemented | External-player validity, codec metadata, sample/bit-depth truth, metadata/artwork compatibility and no fake upsampling |
+| EXP-001 | Audio export | Audio-only MP3/AAC/WAV with only supported bitrate/sample/bit-depth/channel controls | Planned — not implemented | External-player validity, codec metadata, sample/bit-depth truth, metadata/artwork compatibility (title, artist, album, date, style, instruments, tempo, key and quality), AI/user/gallery/custom-edited artwork where format supports it, and no fake upsampling |
 | LIB-001 | Local project library | Organize by song/artist/date/album/genre/type/style; folders; title-only search | Implemented in MVP — limited take list only | Persistence, sort/filter, folder move, title-only search, artwork, metadata and local-only behavior |
-| LIB-002 | File operations and sharing | Rename, play, trim, duplicate file, delete/restore where supported, storage warning, safe cleanup and sharing | Implemented in MVP — deletion only; remaining operations planned | Confirmed deletion, restore behavior, trim integrity, duplicate-file behavior, share targets, low-space warnings and no silent deletion |
+| LIB-002 | File operations and sharing | Rename, play, trim, duplicate file, delete/restore where supported, storage warning, safe cleanup, export-folder management and sharing including supported Bluetooth/Nearby Share targets | Implemented in MVP — deletion only; remaining operations planned | Confirmed deletion, restore behavior, trim integrity, duplicate-file behavior, Android share targets, Bluetooth/Nearby Share where supported, export-folder behavior, low-space warnings, temporary-only cleanup and no silent deletion |
 | UI-001 | Interface and accessibility | Burmese/English, Dark Studio/Light Studio/Silver Chrome themes, rotation and manual orientation lock | Implemented in MVP — basic dark Compose shell only | Localization completeness, theme contrast, orientation changes, screen-size layout and accessibility semantics |
-| PRIV-001 | Privacy and cloud consent | Offline-first; optional cloud AI only after explicit task-level consent and cost/data/retention disclosure | Planned — not implemented | No network upload before consent; cancellation, provider retention disclosure, deletion behavior, local alternative and no automatic cloud backup |
+| PRIV-001 | Privacy and cloud consent | Offline-first; optional cloud AI only after explicit task-level consent and cost/data/retention disclosure; no mandatory core subscription or forced export watermark | Planned — not implemented | No network upload before consent; cancellation, provider retention disclosure, deletion behavior, local alternative, transparent cloud costs, no surprise charges, no mandatory core subscription, no forced watermark and no automatic cloud backup |
 | RIGHTS-001 | Copyright and licensing | Use only authorized music and appropriately licensed models, datasets, libraries and assets | Policy defined; implementation review required | Per-provider/model/asset license inventory, commercial redistribution review, attribution/notice obligations and provenance |
 | REL-001 | Build, provenance and release | Reproducible CI, exact APK validation, traceable artifact provenance and separately accepted physical-device release | Partially implemented — release gate incomplete | Exact head SHA, workflow/run/artifact IDs, APK SHA-256, package/SDK/signature, API 31/35 install-launch, physical-device evidence and release signing |
 
@@ -108,7 +108,23 @@ This snapshot reflects the source inspected during the documentation audit. Re-f
 - Keep imported-song preview and recorded-take playback separate.
 - Keep CI, APK validation, emulator acceptance, physical-device acceptance and feature acceptance as separate gates.
 
-## 6. Document links
+## 6. Explicit scope exclusions
+
+The following are not approved v1 deliverables and must not enter implementation unless the user explicitly changes the product baseline:
+
+- No dependency on RZ Builder or arbitrary ZIP-to-APK conversion.
+- No karaoke video export.
+- No FLAC export or separated-stem export.
+- No separate singing-training curriculum or exercise system.
+- No duplicate-audio detection. A user-requested duplicate-file operation in the local library is a different behavior.
+- No recording touch-lock.
+- No PIN, biometric lock or private vault.
+- No automatic cloud backup, silent upload or mandatory cloud processing.
+- No promise to process every YouTube/online URL.
+- No guarantee of zero Bluetooth latency or full offline AI parity on every device.
+- No fake upsampling or unsupported sample-rate/bit-depth claims.
+
+## 7. Document links
 
 - [Product Vision & Mission](PRODUCT_VISION_AND_MISSION.md)
 - [Requirements](KARAOKE_AI_SINGING_STUDIO_REQUIREMENTS.md)
