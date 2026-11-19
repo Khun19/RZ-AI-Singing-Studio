@@ -57,10 +57,16 @@ jobs:
             echo "::error::Authorization phrase mismatch."; exit 1;
           }
 
+          main_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main")"
+          current_main_sha="$(jq -r '.object.sha' <<<"$main_ref")"
+          test "$current_main_sha" = "$EXPECTED_BASE_SHA" || {
+            echo "::error::main moved; expected base SHA does not match current main."
+            exit 1
+          }
           pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-          jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" \
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" \
             '.state == "open" and .merged == false and .draft == false
-             and .base.ref == "main" and .base.sha == $base
+             and .base.ref == "main"
              and .head.sha == $head and .head.repo.full_name == $repo' <<<"$pr" >/dev/null
 
           runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$EXPECTED_HEAD_SHA&event=pull_request&per_page=100")"
@@ -177,10 +183,16 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/main" || { echo "::error::Merge job must run from main."; exit 1; }
           test "$GITHUB_ACTOR" = "Khun19"
+          main_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main")"
+          current_main_sha="$(jq -r '.object.sha' <<<"$main_ref")"
+          test "$current_main_sha" = "$EXPECTED_BASE_SHA" || {
+            echo "::error::main moved before merge; refusing stale authorization."
+            exit 1
+          }
           pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-          jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" \
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" \
             '.state == "open" and .merged == false and .draft == false
-             and .base.ref == "main" and .base.sha == $base
+             and .base.ref == "main"
              and .head.sha == $head and .head.repo.full_name == $repo' <<<"$pr" >/dev/null
 
       - name: Merge only the authorized head SHA
