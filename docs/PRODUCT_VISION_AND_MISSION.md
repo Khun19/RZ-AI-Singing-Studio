@@ -113,11 +113,10 @@ Use these documents in this order:
 1. **Product Vision & Mission (this document):** defines why the product exists, the intended user outcome, enduring principles and scope boundaries.
 2. **Requirements:** defines the user-selected feature behavior and approved product scope.
 3. **Architecture:** defines technical boundaries, component responsibilities, data flows and verification strategy.
-4. **Architecture Decision Records (ADRs):** record evidence-backed choices of engines, libraries, models, providers and trade-offs.
-5. **Roadmap / Issues / Pull Requests:** define the current execution order and individual work items.5. **Feature Traceability Matrix:** maps each approved feature to implementation status, acceptance criteria and required evidence.  
-6. **Development Workflow:** defines readiness, implementation sequence, PR lifecycle, test layers, stop conditions and Definition of Done.  
-7. **Architecture Decision Records (ADRs):** record evidence-backed technology choices using the [ADR template](adr/0000-template.md).  
-8. **Roadmap / Issues / Pull Requests:** define the current execution order and individual work items.
+4. **Feature Traceability Matrix:** maps each approved feature to implementation status, acceptance criteria and required evidence.
+5. **Architecture Decision Records (ADRs):** record evidence-backed choices of engines, libraries, models, providers and trade-offs using the [ADR template](adr/0000-template.md).
+6. **Development Workflow:** defines readiness, implementation sequence, PR lifecycle, test layers, stop conditions and Definition of Done.
+7. **Roadmap / Issues / Pull Requests:** define the current execution order and individual work items.
 
 A lower-level document or implementation must not silently redefine a higher-level product decision. If documents conflict, stop the affected work, identify the conflict and reconcile the documents before implementation.
 
@@ -147,7 +146,7 @@ Any feature that changes cost policy, data handling, core workflow, export scope
 - Keep implementation, CI, APK validation, provenance, emulator acceptance, physical-device acceptance and feature acceptance as separate gates.
 - Never skip a failed gate to begin dependent work.
 - Use **Root Cause → Fix → Test → Evidence → Documentation Update**.
-- A feature's status must be one of: verified working, implemented but not fully verified, in progress, planned/not implemented, or experimental.
+- A feature's status must use the controlled vocabulary defined in the Feature Traceability Matrix: Implemented in MVP — not fully accepted, In progress, Planned — not implemented, Experimental, Verified working, or Blocked.
 - Documentation must never claim more than the code and evidence prove.
 
 ## 10. Current product maturity
