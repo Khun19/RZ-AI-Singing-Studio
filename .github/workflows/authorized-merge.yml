@@ -126,6 +126,7 @@ jobs:
 
           failed_api35="$(jq -n '[
             {name:"JVM unit tests",status:"completed",conclusion:"success"},
+            {name:"Generate Gradle Wrapper bootstrap files",status:"completed",conclusion:"success"},
             {name:"Android emulator instrumentation tests",status:"completed",conclusion:"success"},
             {name:"Build debug APK",status:"completed",conclusion:"success"},
             {name:"Install and launch exact APK (API 31)",status:"completed",conclusion:"success"},
@@ -138,6 +139,7 @@ jobs:
 
           extra_api_job="$(jq -n '[
             "JVM unit tests",
+            "Generate Gradle Wrapper bootstrap files",
             "Android emulator instrumentation tests",
             "Build debug APK",
             "Install and launch exact APK (API 31)",
