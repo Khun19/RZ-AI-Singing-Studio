@@ -162,8 +162,9 @@ private fun SingingStudioApp() {
         val output = TakeStore.newTakeFile(context)
         var activeRecorder: MediaRecorder? = null
         try {
-            activeRecorder = MediaRecorder(context)
-            activeRecorder.apply {
+            val createdRecorder = MediaRecorder(context)
+            activeRecorder = createdRecorder
+            createdRecorder.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
