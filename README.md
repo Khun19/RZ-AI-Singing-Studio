@@ -5,6 +5,8 @@ RZ AI Singing Studio is a standalone Android karaoke, vocal-recording and AI cov
 The product goal is to let users sing along with music, create karaoke arrangements with newly generated or re-performed instruments, improve and mix their own vocal recordings, and manage audio projects locally.
 
 > **Project status:** Early Android MVP. The feature set below is the approved product direction, not a claim that every feature has been implemented or validated.
+>
+> **Product north star:** [Product Vision & Mission](docs/PRODUCT_VISION_AND_MISSION.md) defines the product goal, user outcome, scope boundaries and change-control rules. The [Requirements](docs/KARAOKE_AI_SINGING_STUDIO_REQUIREMENTS.md) define approved feature behavior; the [Architecture](docs/ARCHITECTURE.md) defines the technical design.
 
 ## Product principles
 
