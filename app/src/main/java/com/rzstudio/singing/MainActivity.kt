@@ -44,6 +44,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +90,7 @@ private fun SingingStudioApp() {
     var takeDurationMs by remember { mutableStateOf(0) }
     var isTakeSeeking by remember { mutableStateOf(false) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var recordingOutput by remember { mutableStateOf<File?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Ready") }
@@ -104,12 +106,20 @@ private fun SingingStudioApp() {
         }
     }
 
+    val latestRecorder = rememberUpdatedState(recorder)
+    val latestRecordingOutput = rememberUpdatedState(recordingOutput)
+    val latestPlayer = rememberUpdatedState(player)
+    val latestTakePlayer = rememberUpdatedState(takePlayer)
+
     DisposableEffect(Unit) {
         onDispose {
-            runCatching { recorder?.stop() }
-            recorder?.release()
-            player?.release()
-            takePlayer?.release()
+            latestRecorder.value?.let { activeRecorder ->
+                val stopped = runCatching { activeRecorder.stop() }.isSuccess
+                runCatching { activeRecorder.release() }
+                if (!stopped) latestRecordingOutput.value?.delete()
+            }
+            latestPlayer.value?.release()
+            latestTakePlayer.value?.release()
         }
     }
 
@@ -150,8 +160,10 @@ private fun SingingStudioApp() {
             return
         }
         val output = TakeStore.newTakeFile(context)
+        var activeRecorder: MediaRecorder? = null
         try {
-            val activeRecorder = MediaRecorder(context).apply {
+            activeRecorder = MediaRecorder(context)
+            activeRecorder.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -162,26 +174,33 @@ private fun SingingStudioApp() {
                 start()
             }
             recorder = activeRecorder
+            recordingOutput = output
             isRecording = true
             status = "Recording: ${output.name}"
         } catch (error: Exception) {
+            activeRecorder?.let { runCatching { it.release() } }
             output.delete()
-            recorder?.release()
             recorder = null
+            recordingOutput = null
             status = "Recording could not start: ${error.javaClass.simpleName}"
         }
     }
 
     fun stopRecording() {
         val activeRecorder = recorder ?: return
+        val output = recordingOutput
+        var saved = false
         try {
             activeRecorder.stop()
-            status = "Take saved"
+            saved = output?.isFile == true && output.length() > 0L
+            status = if (saved) "Take saved" else "Recording could not be saved"
         } catch (_: RuntimeException) {
             status = "Recording was too short or could not be saved"
         } finally {
-            activeRecorder.release()
+            runCatching { activeRecorder.release() }
+            if (!saved) output?.delete()
             recorder = null
+            recordingOutput = null
             isRecording = false
             takes = TakeStore.list(context)
         }
@@ -309,23 +328,30 @@ private fun SingingStudioApp() {
                                             status = "Playing recorded take"
                                         } else {
                                             takePlayer?.release()
-                                            takePlayer = MediaPlayer.create(context, Uri.fromFile(take))
-                                            if (takePlayer == null) {
+                                            takePlayer = null
+                                            playingTakePath = null
+                                            isTakePlaying = false
+                                            takePositionMs = 0f
+                                            takeDurationMs = 0
+                                            val newPlayer = MediaPlayer.create(context, Uri.fromFile(take))
+                                            if (newPlayer == null) {
                                                 status = "This recording could not be played"
                                             } else {
+                                                takePlayer = newPlayer
                                                 playingTakePath = take.absolutePath
-                                                takeDurationMs = takePlayer?.duration ?: 0
-                                                takePositionMs = 0f
-                                                takePlayer?.setOnCompletionListener {
-                                                    isTakePlaying = false
-                                                    playingTakePath = null
-                                                    takePositionMs = 0f
-                                                    takeDurationMs = 0
-                                                    takePlayer?.release()
-                                                    takePlayer = null
+                                                takeDurationMs = newPlayer.duration
+                                                newPlayer.setOnCompletionListener { completedPlayer ->
+                                                    if (takePlayer === completedPlayer) {
+                                                        takePlayer = null
+                                                        isTakePlaying = false
+                                                        playingTakePath = null
+                                                        takePositionMs = 0f
+                                                        takeDurationMs = 0
+                                                    }
+                                                    completedPlayer.release()
                                                     status = "Take playback completed"
                                                 }
-                                                takePlayer?.start()
+                                                newPlayer.start()
                                                 isTakePlaying = true
                                                 status = "Playing recorded take"
                                             }
@@ -351,7 +377,7 @@ private fun SingingStudioApp() {
                                         playingTakePath = null
                                         isTakePlaying = false
                                     }
-                                    TakeStore.delete(take)
+                                    TakeStore.delete(take, File(context.filesDir, "recordings"))
                                     takes = TakeStore.list(context)
                                     status = "Take deleted"
                                 }) { Text("Delete") }
@@ -427,9 +453,10 @@ internal object TakeStore {
             ?.sortedByDescending { it.lastModified() }
             ?: emptyList()
 
-    fun delete(file: File): Boolean {
-        val parent = file.parentFile ?: return false
-        if (parent.name != "recordings") return false
+    fun delete(file: File, recordingsDirectory: File): Boolean {
+        val canonicalDirectory = runCatching { recordingsDirectory.canonicalFile }.getOrNull() ?: return false
+        val canonicalFile = runCatching { file.canonicalFile }.getOrNull() ?: return false
+        if (canonicalFile.parentFile != canonicalDirectory) return false
         return file.delete()
     }
 }
