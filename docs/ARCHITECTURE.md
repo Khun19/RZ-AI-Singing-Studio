@@ -3,6 +3,7 @@
 **Status:** Architecture baseline aligned to the user-selected product requirements (v1).  
 **Platform:** Standalone Android application, Android 12+ (API 31+).  
 **Repository:** `Khun19/RZ-AI-Singing-Studio`  
+**Product vision:** [Product Vision & Mission](PRODUCT_VISION_AND_MISSION.md)  
 **Product requirements:** [Karaoke & AI Singing Studio Requirements](KARAOKE_AI_SINGING_STUDIO_REQUIREMENTS.md)
 
 > This document describes the intended system architecture. A module, interface, or data flow described here is not evidence that it has been implemented. See [Implementation status](#implementation-status) and verify feature-specific tests before claiming functionality.
