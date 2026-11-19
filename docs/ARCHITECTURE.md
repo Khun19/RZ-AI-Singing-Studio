@@ -91,6 +91,8 @@ Bluetooth latency varies by device, codec and route. Estimate/compensate where p
 
 **Engine decision is not final.** Benchmark native Android audio APIs (AudioRecord/AudioTrack and supported low-latency paths) against Oboe on representative API 31+ devices and routes. Compare round-trip latency, synchronization drift, glitches, CPU, battery, thermal behavior, route changes and recovery. Select an implementation only after reproducible measurements. Keep a compatible fallback for devices/routes where the preferred path is unavailable.
 
+The reproducible procedure and provisional gates are defined in [Audio Engine Benchmark Preparation](AUDIO_ENGINE_BENCHMARK_PLAN.md); the current deferred decision is tracked in [ADR-0001](adr/0001-audio-engine-selection.md). The read-only Android capability probe is an instrumentation test and does not capture or upload microphone audio.
+
 ### 4.3 Recording lifecycle and recovery
 
 Recording manager owns explicit states such as idle, preparing, recording, paused, interrupted, saving, recoverable-draft and completed. State transitions must be testable.

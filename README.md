@@ -123,6 +123,8 @@ The approved policy is **Offline-First + Optional Paid Cloud AI + Local Alternat
 
 Technology choices are not final until the feasibility and license review is complete. Evaluate candidate Android audio engines, DSP libraries, inference runtimes and AI models against:
 
+**Audio engine selection is currently open.** The [Audio Engine Benchmark Preparation](docs/AUDIO_ENGINE_BENCHMARK_PLAN.md) defines the physical-device test protocol; [ADR-0001](docs/adr/0001-audio-engine-selection.md) records why no engine has been selected yet.
+
 - Android API and ABI compatibility.
 - Commercial-use license and redistribution obligations.
 - Model/package size and download requirements.
