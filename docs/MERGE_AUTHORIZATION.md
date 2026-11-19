@@ -10,13 +10,13 @@ A green CI run is not merge authorization. Comments, labels, bot reviews and pre
 
 After the PR is ready and all evidence exists:
 
-1. Copy the PR's full 40-character Head SHA and current main Base SHA.
+1. Copy the PR's full 40-character Head SHA and the live `refs/heads/main` SHA from the repository's main branch page/API. Do not use a stale `base.sha` value returned by the PR object; the workflow independently reads the live main ref and compares it with the supplied SHA.
 2. Open Actions → Authorized Merge Gate → Run workflow on the default branch.
 3. Supply pr_number, expected_head_sha, expected_base_sha, and the phrase:
    MERGE-PR-<number>-<full-head-sha>
 4. Dispatch. A successful run authorizes and merges only that exact revision.
 
-Only Khun19 is permitted to dispatch, and the workflow refuses to run unless the selected workflow ref is the trusted `main` branch. The workflow checks the PR is open, non-draft, targets main, belongs to this repository, and still matches both supplied SHAs. It then checks the latest Android CI run for that PR/head, every job conclusion, and required unexpired APK/test evidence artifacts. Immediately before merge it rechecks the PR and uses GitHub's expected-head-SHA merge precondition.
+Only Khun19 is permitted to dispatch, and the workflow refuses to run unless the selected workflow ref is the trusted `main` branch. The workflow checks the live main ref against the supplied main SHA, and checks the PR is open, non-draft, targets main, belongs to this repository, and still matches the supplied head SHA. It then checks the latest Android CI run for that PR/head, every required job conclusion, and required unexpired APK/test evidence artifacts. Immediately before merge it rechecks the live main ref and PR, then uses GitHub's expected-head-SHA merge precondition. A main-branch update invalidates the supplied authorization; dispatch again with the new live main SHA after revalidating the PR.
 
 ## Evidence requirements
 
