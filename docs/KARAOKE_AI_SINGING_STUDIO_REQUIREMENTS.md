@@ -4,7 +4,12 @@
 **Platform:** Standalone Android application, Android 12+ (API 31+)  
 **Repository:** `Khun19/RZ-AI-Singing-Studio`  
 **Architecture direction:** Offline-first, optional cloud acceleration  
-**Important:** This document records product choices. It does not claim that every feature is technically feasible on every device or that any AI model/library has passed license review.
+**Product north star:** [Product Vision & Mission](PRODUCT_VISION_AND_MISSION.md)  
+**Architecture:** [Architecture Document](ARCHITECTURE.md)  **Feature tracking:** [Feature Traceability Matrix](FEATURE_TRACEABILITY_MATRIX.md)  
+**Delivery process:** [Development Workflow](DEVELOPMENT_WORKFLOW.md)  
+**Technical decisions:** [ADR template](adr/0000-template.md)  
+
+**Important:** This document records user-selected feature behavior and product choices under the Product Vision. It does not claim that every feature is technically feasible on every device or that any AI model/library has passed license review. If a requirement conflicts with the Vision or Architecture, pause the affected work and reconcile the documents before implementation.
 
 ## 1. Product boundaries and principles
 
