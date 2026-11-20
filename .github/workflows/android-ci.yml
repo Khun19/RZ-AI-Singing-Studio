@@ -68,7 +68,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v4
       - name: Validate committed Gradle Wrapper
         run: ./gradlew --version
@@ -89,7 +89,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v4
       - name: Enable KVM access when available
         run: |
@@ -113,7 +113,6 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          # android-emulator-runner splits multiline scripts; invoke one tracked helper script.
           script: bash .github/scripts/run-emulator-tests.sh
       - name: Capture emulator diagnostics (always)
         if: always()
@@ -170,7 +169,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v4
       - name: Assemble debug APK with committed Wrapper
         run: ./gradlew assembleDebug
@@ -208,7 +207,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: actions/download-artifact@v4
         with:
           name: rz-ai-singing-studio-debug
@@ -261,4 +260,3 @@ jobs:
           path: app/build/apk-validation/
           if-no-files-found: warn
           retention-days: 14
-
