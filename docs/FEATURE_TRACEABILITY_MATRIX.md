@@ -90,7 +90,7 @@ This snapshot reflects the source inspected during the documentation audit. Re-f
 | App shell | Kotlin + Jetpack Compose MainActivity | MainActivity currently owns most UI, player, recorder and storage behavior; modular boundaries are architectural direction, not implemented |
 | Local import | Android OpenDocument picker and persisted read permission attempt | Imported-source preview has no dedicated instrumentation acceptance yet |
 | Preview | MediaPlayer selected-source play/pause path | No verified selected-source seek workflow |
-| Audio engine | Oboe 1.11.0 native full-duplex foundation, Kotlin/JNI API, preallocated SPSC PCM queues and stream diagnostics | Feature branch implementation; CI and physical Redmi/API31 validation pending; not yet the user-facing recorder |
+| Audio engine | Oboe 1.11.0 native full-duplex foundation, Kotlin/JNI API, preallocated SPSC PCM queues and stream diagnostics | Feature branch implementation; physical-device test user-confirmed PASS; exact-head CI pending; not yet the user-facing recorder |
 | Recording | MediaRecorder microphone AAC in MP4/M4A container | Mic-only; no backing-track synchronization or mixing |
 | Takes | Local private recordings directory, list and delete; TakeStore path-boundary test | No full library, draft model, rename/trim/restore or recovery |
 | Instrumentation | Recorded-take playback/seek/pause/resume/completion and activity recreation checks; smoke test | Recorded-take playback tests do not prove imported-song preview |
