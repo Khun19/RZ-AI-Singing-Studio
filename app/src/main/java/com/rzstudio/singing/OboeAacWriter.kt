@@ -87,8 +87,17 @@ internal class OboeAacWriter(
                             ?: error("Encoder input buffer unavailable")
                         input.clear()
                         floatBuffer.clear()
-                        val count = engine.readCapturedPcm(floatBuffer, samples.size)
+                        var count = engine.readCapturedPcm(floatBuffer, samples.size)
                         check(count >= 0) { "PCM read failed with code $count" }
+                        // Do not submit empty non-EOS buffers. Hold the acquired encoder input
+                        // buffer briefly while polling capture; stop waiting when requested.
+                        val waitDeadline = System.nanoTime() + 5_000_000_000L
+                        while (count == 0 && !stopping.get() && System.nanoTime() < waitDeadline) {
+                            Thread.sleep(10)
+                            floatBuffer.clear()
+                            count = engine.readCapturedPcm(floatBuffer, samples.size)
+                            check(count >= 0) { "PCM read failed with code $count" }
+                        }
                         if (count > 0) {
                             check(count <= samples.size && count * 2 <= input.remaining()) {
                                 "PCM read exceeds encoder buffer"
@@ -102,8 +111,8 @@ internal class OboeAacWriter(
                             codec.queueInputBuffer(inputIndex, 0, count * 2,
                                 Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
                             totalSamples += count
-                        } else if (stopping.get()) {
-                            // Stop callbacks, then drain the ring buffer until a definitive empty read.
+                        } else if (stopping.get() || System.nanoTime() >= waitDeadline) {
+                            // Stop callbacks, then drain the ring until empty before EOS.
                             if (engineStarted) {
                                 check(engine.stop() == 0) { "AudioEngine stop failed" }
                                 engineStarted = false
@@ -129,9 +138,7 @@ internal class OboeAacWriter(
                                 eosSent = true
                             }
                         } else {
-                            // Avoid busy-looping: return the acquired input buffer with zero payload.
-                            codec.queueInputBuffer(inputIndex, 0, 0,
-                                Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
+                            error("Unexpected empty PCM wait state")
                         }
                     }
                 }
