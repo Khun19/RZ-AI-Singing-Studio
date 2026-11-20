@@ -6,7 +6,7 @@ Experimental worker-thread capture encoder draining mono Float PCM from Oboe and
 ## Capture and encoder policy
 - Start the Oboe engine and obtain the negotiated capture sample rate from engine diagnostics before configuring MediaCodec.
 - Reject unavailable or mismatched capture sample-rate values rather than silently producing pitch/duration errors.
-- PCM capture, conversion, MediaCodec and MediaMuxer work only on the writer worker thread.
+- PCM capture, conversion, MediaCodec and MediaMuxer work only on the writer worker thread.\n- Wait for capture PCM without queuing artificial empty input buffers; a bounded starvation timeout fails the recording instead of silently ending it.
 - Negative PCM reads are treated as errors, not as silence or EOS.
 - PCM conversion clips normalized float values and sanitizes NaN/Infinity.
 - PTS are based on accumulated captured sample count and the validated actual sample rate.
