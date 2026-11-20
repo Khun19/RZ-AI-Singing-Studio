@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Worker-thread capture encoder. Not yet connected to the public recording UI. */
+/** Experimental worker-thread capture encoder. Not connected to public UI. */
 internal class OboeAacWriter(
     private val engine: AudioEngine,
     private val output: File,
@@ -21,6 +21,7 @@ internal class OboeAacWriter(
 
     fun start() {
         check(worker == null) { "Writer instance is single-use" }
+        require(sampleRate > 0 && bitrate > 0)
         check(!output.exists() || output.delete()) { "Output file already exists" }
         output.parentFile?.mkdirs()
         stopping.set(false)
@@ -28,11 +29,12 @@ internal class OboeAacWriter(
     }
 
     fun stopAndJoin(timeoutMs: Long = 15_000): File {
+        val thread = worker ?: error("Writer has not started")
         stopping.set(true)
-        worker?.join(timeoutMs)
-        check(worker?.isAlive != true) { "Encoder worker did not stop in time" }
+        thread.join(timeoutMs)
+        check(!thread.isAlive) { "Encoder worker did not stop in time" }
         failure?.let { throw IllegalStateException("Recording failed", it) }
-        check(output.isFile && output.length() > 0) { "No valid recording produced" }
+        check(output.isFile && output.length() > 0) { "No recording produced" }
         return output
     }
 
@@ -40,21 +42,25 @@ internal class OboeAacWriter(
         var codec: MediaCodec? = null
         var muxer: MediaMuxer? = null
         var muxerStarted = false
+        var trackIndex = -1
+        var engineStarted = false
         var totalSamples = 0L
         var eosSent = false
-        val floats = FloatArray(2048)
-        val floatBuffer = ByteBuffer.allocateDirect(floats.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
-        val pcmBytes = ByteBuffer.allocateDirect(floats.size * 2).order(ByteOrder.nativeOrder())
+        val samples = FloatArray(2048)
+        val floatBuffer = ByteBuffer.allocateDirect(samples.size * 4)
+            .order(ByteOrder.nativeOrder()).asFloatBuffer()
+        val pcmBytes = ByteBuffer.allocateDirect(samples.size * 2).order(ByteOrder.nativeOrder())
         try {
             codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
             val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, 1)
-            format.setInteger(MediaFormat.KEY_AAC_PROFILE, 2) // AAC-LC
+            format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.AAC_PROFILE_LC)
             format.setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
             format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, pcmBytes.capacity())
             codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             codec.start()
             muxer = MediaMuxer(output.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             check(engine.start() == 0) { "Audio engine failed to start" }
+            engineStarted = true
 
             val info = MediaCodec.BufferInfo()
             var outputEos = false
@@ -62,38 +68,33 @@ internal class OboeAacWriter(
                 if (!eosSent) {
                     val inputIndex = codec.dequeueInputBuffer(10_000)
                     if (inputIndex >= 0) {
-                        val input = codec.getInputBuffer(inputIndex) ?: error("Encoder input unavailable")
+                        val input = codec.getInputBuffer(inputIndex) ?: error("Encoder input buffer unavailable")
                         input.clear()
                         floatBuffer.clear()
-                        val count = engine.readCapturedPcm(floatBuffer, floats.size)
+                        val count = engine.readCapturedPcm(floatBuffer, samples.size)
                         if (count > 0) {
                             floatBuffer.flip()
-                            for (i in 0 until count) floats[i] = floatBuffer.get()
+                            for (i in 0 until count) samples[i] = floatBuffer.get()
                             pcmBytes.clear()
-                            Pcm16Converter.convert(floats.copyOf(count), pcmBytes)
+                            Pcm16Converter.convert(samples.copyOf(count), pcmBytes)
                             pcmBytes.flip()
                             input.put(pcmBytes)
-                            codec.queueInputBuffer(inputIndex, 0, count * 2, Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
+                            codec.queueInputBuffer(inputIndex, 0, count * 2,
+                                Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
                             totalSamples += count
                         } else if (stopping.get()) {
-                            engine.stop()
-                            floatBuffer.clear()
-                            val remaining = engine.readCapturedPcm(floatBuffer, floats.size)
-                            if (remaining > 0) {
-                                floatBuffer.flip()
-                                for (i in 0 until remaining) floats[i] = floatBuffer.get()
-                                pcmBytes.clear()
-                                Pcm16Converter.convert(floats.copyOf(remaining), pcmBytes)
-                                pcmBytes.flip()
-                                input.put(pcmBytes)
-                                codec.queueInputBuffer(inputIndex, 0, remaining * 2, Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
-                                totalSamples += remaining
-                            } else {
-                                codec.queueInputBuffer(inputIndex, 0, 0, Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                                eosSent = true
+                            if (engineStarted) {
+                                engine.stop()
+                                engineStarted = false
                             }
+                            codec.queueInputBuffer(inputIndex, 0, 0,
+                                Pcm16Converter.presentationTimeUs(totalSamples, sampleRate),
+                                MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            eosSent = true
                         } else {
-                            codec.queueInputBuffer(inputIndex, 0, 0, Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
+                            // Empty input buffers are not submitted; retry capture and drain output.
+                            codec.queueInputBuffer(inputIndex, 0, 0,
+                                Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
                         }
                     }
                 }
@@ -102,24 +103,27 @@ internal class OboeAacWriter(
                     val out = codec.getOutputBuffer(outIndex)
                     if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) info.size = 0
                     if (info.size > 0) {
-                        if (!muxerStarted) {
-                            muxer.addTrack(codec.outputFormat)
-                            muxer.start()
-                            muxerStarted = true
-                        }
-                        out!!.position(info.offset)
+                        check(muxerStarted) { "Encoded data arrived before output format" }
+                        requireNotNull(out)
+                        out.position(info.offset)
                         out.limit(info.offset + info.size)
-                        muxer.writeSampleData(0, out, info)
+                        muxer.writeSampleData(trackIndex, out, info)
                     }
                     outputEos = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
                     codec.releaseOutputBuffer(outIndex, false)
                     if (outputEos) break
                     outIndex = codec.dequeueOutputBuffer(info, 0)
                 }
+                if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    check(!muxerStarted) { "Encoder output format changed more than once" }
+                    trackIndex = muxer.addTrack(codec.outputFormat)
+                    muxer.start()
+                    muxerStarted = true
+                }
             }
         } catch (t: Throwable) {
             failure = t
-            runCatching { engine.stop() }
+            runCatching { if (engineStarted) engine.stop() }
         } finally {
             runCatching { codec?.stop() }
             runCatching { codec?.release() }
