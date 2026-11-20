@@ -67,7 +67,7 @@ internal class OboeAacWriter(
 
             codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
             val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, 1)
-            format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.AAC_PROFILE_LC)
+            format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
             format.setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
             format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, pcmBytes.capacity())
             codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
