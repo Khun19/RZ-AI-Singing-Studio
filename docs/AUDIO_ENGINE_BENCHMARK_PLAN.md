@@ -20,7 +20,7 @@ Implement Oboe as the production engine family while retaining Android AudioReco
 - The native engine requests 48 kHz Float PCM, mono input and stereo output; actual values/backend are queried from opened streams.
 - The engine uses Oboe FullDuplexStream, preallocated single-producer/single-consumer PCM rings, optional microphone monitoring, playback PCM queueing and capture PCM draining.
 - Termux on Redmi M2007J22C / API 31 previously proved system-level simultaneous microphone capture and speaker playback. This is not app-level synchronization or latency acceptance.
-- No physical Oboe app-level latency, drift or endurance result is available yet.
+- User has confirmed the physical-device test passed. Detailed app-level latency percentiles, drift, xrun counts, route matrix and endurance records have not been supplied for independent review.
 
 ## 3. Benchmark phases
 
@@ -31,6 +31,8 @@ Implement Oboe as the production engine family while retaining Android AudioReco
 - Treat emulator success as compilation/integration evidence only.
 
 ### Phase 1 — Physical Oboe stream validation
+
+**User-reported status:** PASS. Treat this as user-confirmed device acceptance for the tested configuration; do not infer unprovided latency, drift, backend or endurance measurements.
 - On Redmi M2007J22C / API 31, grant microphone permission explicitly and start the engine.
 - Record actual input/output backend, sample rate, channel count, sharing mode, frames per burst, buffer size/capacity and errors.
 - Confirm simultaneous input and output callbacks are active.
