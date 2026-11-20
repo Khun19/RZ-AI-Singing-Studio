@@ -1,6 +1,7 @@
 package com.rzstudio.singing
 
 import android.media.MediaCodec
+import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import java.io.File
