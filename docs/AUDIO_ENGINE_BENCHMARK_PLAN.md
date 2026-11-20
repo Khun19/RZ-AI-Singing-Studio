@@ -1,6 +1,6 @@
 # Audio Engine Benchmark Plan
 
-- **Status:** Oboe implementation started; physical-device benchmark pending
+- **Status:** Oboe implementation started; primary physical-device test user-confirmed PASS; detailed benchmark metrics pending
 - **Owner:** RZ AI Singing Studio
 - **Baseline branch:** main
 - **Scope:** Android 12+ (API 31+) audio capability discovery, Oboe integration and reproducible engine comparison
