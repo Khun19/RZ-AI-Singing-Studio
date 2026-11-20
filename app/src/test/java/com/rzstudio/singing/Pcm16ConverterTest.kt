@@ -12,8 +12,8 @@ class Pcm16ConverterTest {
         val buffer = ByteBuffer.allocate(values.size * 2).order(ByteOrder.nativeOrder())
         Pcm16Converter.convert(values, buffer)
         buffer.flip()
-        assertEquals(Short.MIN_VALUE, buffer.getShort().toInt())
-        assertEquals(Short.MIN_VALUE, buffer.getShort().toInt())
+        assertEquals(Short.MIN_VALUE.toInt(), buffer.getShort().toInt())
+        assertEquals(Short.MIN_VALUE.toInt(), buffer.getShort().toInt())
         assertEquals(-16383, buffer.getShort().toInt())
         assertEquals(0, buffer.getShort().toInt())
         assertEquals(16383, buffer.getShort().toInt())
@@ -28,7 +28,7 @@ class Pcm16ConverterTest {
         val buffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder())
         assertEquals(4, Pcm16Converter.convert(values, 2, buffer))
         buffer.flip()
-        assertEquals(Short.MIN_VALUE, buffer.getShort().toInt())
+        assertEquals(Short.MIN_VALUE.toInt(), buffer.getShort().toInt())
         assertEquals(8191, buffer.getShort().toInt())
     }
 
