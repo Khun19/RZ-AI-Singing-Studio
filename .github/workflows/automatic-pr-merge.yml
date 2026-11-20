@@ -44,26 +44,54 @@ jobs:
           ' <<<"$pr" >/dev/null
           echo "PR identity and exact event SHAs verified."
 
-      - name: Request asynchronous squash merge
+      - name: Request asynchronous squash merge with 409 recovery
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          response="$(gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async" \
-            -f merge_method=squash \
-            -f merge_action=default \
-            -f sha="$EXPECTED_HEAD_SHA")"
-          status="$(jq -r '.status // empty' <<<"$response")"
-          case "$status" in
-            pending|enqueued|merged)
-              echo "Asynchronous squash merge accepted: $status"
-              ;;
-            *)
-              echo "Unexpected async merge response; failing closed." >&2
-              jq . <<<"$response" >&2
+          endpoint="repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async"
+
+          # Retry only HTTP 409 conflicts; never reinterpret a conflict as merge success.
+          # Each retry revalidates the exact PR head and base before resubmitting.
+          for attempt in 1 2 3 4 5; do
+            pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+            jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" '
+              .state == "open" and .merged == false and .draft == false
+              and .base.ref == "main" and .head.repo.full_name == $repo
+              and .head.sha == $head and .base.sha == $base
+            ' <<<"$pr" >/dev/null || {
+              echo "PR identity or exact head/base changed; aborting closed." >&2
               exit 1
-              ;;
-          esac
+            }
+
+            if response="$(gh api --method PUT "$endpoint"               -f merge_method=squash -f merge_action=default -f sha="$EXPECTED_HEAD_SHA" 2>&1)"; then
+              status="$(jq -r '.status // empty' <<<"$response")"
+              case "$status" in
+                pending|enqueued|merged)
+                  echo "Asynchronous squash merge accepted: $status"
+                  exit 0
+                  ;;
+                *)
+                  echo "Unexpected async merge response; failing closed." >&2
+                  jq . <<<"$response" >&2 || printf '%s\n' "$response" >&2
+                  exit 1
+                  ;;
+              esac
+            else
+              if grep -q 'HTTP 409' <<<"$response"; then
+                echo "Async merge conflict (409), attempt $attempt/5; rechecking exact identity before retry."
+                if [[ "$attempt" -lt 5 ]]; then sleep $((attempt * 5)); fi
+              else
+                echo "Async merge request failed unexpectedly; failing closed." >&2
+                printf '%s\n' "$response" >&2
+                exit 1
+              fi
+            fi
+          done
+
+          echo "Conflict persisted after bounded retries; no merge success assumed." >&2
+          exit 1
