@@ -20,23 +20,33 @@ class AudioEngine : Closeable {
     @Synchronized
     fun stop(): Int = if (handle == 0L) 0 else nativeStop(handle)
 
+    @Synchronized
     fun setMonitoring(enabled: Boolean) {
         val current = requireHandle()
         nativeSetMonitoring(current, enabled)
     }
 
+    @Synchronized
     fun readCapturedPcm(destination: FloatBuffer, maxSamples: Int = destination.remaining()): Int {
         requireDirectNativeBuffer(destination)
         require(maxSamples >= 0 && maxSamples <= destination.remaining())
-        return nativeReadCapturedPcm(requireHandle(), destination, maxSamples)
+        val window = destination.slice()
+        val read = nativeReadCapturedPcm(requireHandle(), window, maxSamples)
+        if (read > 0) destination.position(destination.position() + read)
+        return read
     }
 
+    @Synchronized
     fun queuePlaybackPcm(source: FloatBuffer, samples: Int = source.remaining()): Int {
         requireDirectNativeBuffer(source)
         require(samples >= 0 && samples <= source.remaining())
-        return nativeQueuePlaybackPcm(requireHandle(), source, samples)
+        val window = source.slice()
+        val queued = nativeQueuePlaybackPcm(requireHandle(), window, samples)
+        if (queued > 0) source.position(source.position() + queued)
+        return queued
     }
 
+    @Synchronized
     fun diagnostics(): String = nativeDiagnostics(requireHandle())
 
     @Synchronized
