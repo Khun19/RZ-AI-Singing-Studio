@@ -82,9 +82,9 @@ public:
 
     ~AudioEngine() override { stop(); }
 
-    int32_t start() {
+    oboe::Result start() override {
         std::lock_guard<std::mutex> guard(mLifecycleMutex);
-        if (mRunning.load(std::memory_order_acquire)) return 0;
+        if (mRunning.load(std::memory_order_acquire)) return oboe::Result::OK;
         closeStreamsLocked();
         mLastError.store(0, std::memory_order_relaxed);
         mCaptureDropped.store(0, std::memory_order_relaxed);
@@ -101,7 +101,7 @@ public:
         if (result != oboe::Result::OK) {
             closeStreamsLocked();
             mLastError.store(static_cast<int32_t>(result), std::memory_order_release);
-            return static_cast<int32_t>(result);
+            return result;
         }
 
         setSharedInputStream(mInputStream);
@@ -115,17 +115,18 @@ public:
             return static_cast<int32_t>(result);
         }
         mRunning.store(true, std::memory_order_release);
-        return 0;
+        return oboe::Result::OK;
     }
 
-    int32_t stop() {
+    oboe::Result stop() override {
         std::lock_guard<std::mutex> guard(mLifecycleMutex);
         mRunning.store(false, std::memory_order_release);
+        oboe::Result result = oboe::Result::OK;
         if (mInputStream && mOutputStream) {
-            (void) oboe::FullDuplexStream::stop();
+            result = oboe::FullDuplexStream::stop();
         }
         closeStreamsLocked();
-        return 0;
+        return result;
     }
 
     void setMonitoring(bool enabled) noexcept {
@@ -321,13 +322,13 @@ Java_com_rzstudio_singing_AudioEngine_nativeCreate(JNIEnv *, jobject) {
 extern "C" JNIEXPORT jint JNICALL
 Java_com_rzstudio_singing_AudioEngine_nativeStart(JNIEnv *, jobject, jlong handle) {
     auto *engine = fromHandle(handle);
-    return engine == nullptr ? static_cast<jint>(oboe::Result::ErrorNull) : engine->start();
+    return engine == nullptr ? static_cast<jint>(oboe::Result::ErrorNull) : static_cast<jint>(engine->start());
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_rzstudio_singing_AudioEngine_nativeStop(JNIEnv *, jobject, jlong handle) {
     auto *engine = fromHandle(handle);
-    return engine == nullptr ? static_cast<jint>(oboe::Result::ErrorNull) : engine->stop();
+    return engine == nullptr ? static_cast<jint>(oboe::Result::ErrorNull) : static_cast<jint>(engine->stop());
 }
 
 extern "C" JNIEXPORT void JNICALL
