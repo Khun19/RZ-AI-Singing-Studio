@@ -1,6 +1,6 @@
 # ADR-0001: Android audio engine selection
 
-- **Status:** Accepted for implementation; physical-device acceptance pending
+- **Status:** Accepted for implementation; primary physical-device test user-confirmed PASS; detailed metric evidence pending
 - **Date:** 2026-11-20
 - **Owners:** RZ AI Singing Studio
 - **Related feature IDs:** Synchronized karaoke recording; live monitoring; recording lifecycle and recovery
@@ -43,8 +43,8 @@ The user has selected Oboe as the engine family, preferring AAudio on the suppor
 - Production stream policy: request AudioApi::Unspecified; record the actual backend after opening. Oboe normally selects AAudio when recommended and may select OpenSL ES otherwise.
 - Explicit OpenSL ES selection is diagnostic/compatibility-only; it is deprecated on modern Android and is not assumed to be a reliable fallback.
 - Current implementation: native full-duplex capture/output engine foundation with preallocated SPSC PCM queues, optional monitoring, playback PCM queue, capture PCM drain API and stream diagnostics.
-- Raw Oboe app-level benchmark results: NOT RUN.
-- Physical loopback, sync drift and endurance results: NOT RUN.
+- User confirmed the Oboe physical-device test passed. Detailed raw benchmark evidence (latency percentiles, drift, xrun counts, route matrix and endurance logs) has not been supplied.
+- Physical loopback, sync drift and endurance numeric results: NOT independently inspected; user has confirmed the physical-device test passed.
 - Exact APK and Redmi acceptance: NOT RUN.
 
 ## 5. Decision
@@ -95,9 +95,9 @@ This decision authorizes implementation, but does not waive the physical-device 
 - [x] Native engine foundation and JNI boundary added on feature branch.
 - [ ] Exact-head Android CI, native compilation and APK validation pass.
 - [ ] Native engine instrumentation smoke tests pass.
-- [ ] Redmi M2007J22C physical stream initialization and actual backend verified.
-- [ ] Physical full-duplex capture/playback and wired loopback measured.
-- [ ] Drift, xruns, route changes and 30-minute endurance pass.
+- [x] Primary physical-device test: user-confirmed PASS; detailed backend/stream diagnostics remain to be attached.
+- [ ] Physical full-duplex capture/playback and wired loopback measurement records attached.
+- [ ] Drift, xruns, route changes and 30-minute endurance records attached and reviewed.
 - [ ] PCM-to-file recording, crash recovery and synchronized backing decoder integration accepted.
 - [ ] Feature Traceability Matrix and implementation status updated with exact evidence.
 
