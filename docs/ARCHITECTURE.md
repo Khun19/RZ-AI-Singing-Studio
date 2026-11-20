@@ -32,7 +32,7 @@ The application must:
 4. **Non-destructive processing:** retain original takes and source assets; generated/fixed versions are separate artifacts with settings and lineage.
 5. **Capability-aware execution:** choose local model/quality paths based on API, ABI, RAM, compute, thermal and storage capability; fail gracefully on unsupported devices.
 6. **Evidence-driven status:** source presence, CI, APK validation, device acceptance and feature acceptance are separate states.
-7. **No premature technology lock-in:** engine, codecs, model runtimes and providers remain replaceable until benchmarks and license reviews support a decision.
+7. **Evidence-based technology decisions:** keep codecs, model runtimes and providers replaceable; selected engines remain subject to physical acceptance and documented rollback.
 
 ## 3. High-level component architecture
 
@@ -42,7 +42,7 @@ The application must:
 | Project & workflow coordinator | Song session, recording workflow, processing jobs and state transitions | Planned |
 | Audio import & metadata | SAF-based local import, permission-aware online sources, metadata | Basic local SAF import exists |
 | Playback engine | Backing-track decode, transport, seek and playback state | Basic MediaPlayer preview exists |
-| Audio engine | PCM capture/output, synchronized backing + microphone, routing, monitoring and track alignment | Planned; technology selection pending benchmarks |
+| Audio engine | PCM capture/output, synchronized backing + microphone, routing, monitoring and track alignment | Oboe native full-duplex foundation added on feature branch; CI and physical acceptance pending |
 | Recording manager | One-take, multi-take, punch-in, take lifecycle and autosave | Basic mic-only recording exists; advanced workflows planned |
 | Lyrics pipeline | Licensed/authorized lyric lookup, speech recognition, line segmentation, timing and uncertainty labels | Planned |
 | Vocal separation | Vocal/instrumental separation for karaoke backing creation | Planned; distinct from cover generation |
@@ -89,7 +89,9 @@ Target flow:
 
 Bluetooth latency varies by device, codec and route. Estimate/compensate where possible and expose manual adjustment; do not guarantee zero latency. Final track alignment is distinct from the live monitoring delay.
 
-**Engine decision is not final.** Benchmark native Android audio APIs (AudioRecord/AudioTrack and supported low-latency paths) against Oboe on representative API 31+ devices and routes. Compare round-trip latency, synchronization drift, glitches, CPU, battery, thermal behavior, route changes and recovery. Select an implementation only after reproducible measurements. Keep a compatible fallback for devices/routes where the preferred path is unavailable.
+**Engine decision:** Oboe is selected for implementation by [ADR-0001](adr/0001-audio-engine-selection.md). Production requests Oboe AudioApi::Unspecified, allowing runtime backend selection; AAudio is preferred where recommended. Actual input/output backend and stream properties must be logged. Explicit OpenSL ES is reserved for compatibility benchmarking and is not assumed to be a reliable fallback on API 31+.
+
+The initial native foundation uses Oboe FullDuplexStream, 48 kHz Float PCM requests, mono input, stereo output, preallocated SPSC PCM queues and a Kotlin/JNI control boundary. Exclusive mode is attempted first with Shared retry. Monitoring is disabled by default. Durable file encoding, backing-track decode integration, route recovery, physical latency and long-duration stability remain pending. The reproducible procedure and provisional gates are defined in [Audio Engine Benchmark Plan](AUDIO_ENGINE_BENCHMARK_PLAN.md).
 
 ### 4.3 Recording lifecycle and recovery
 
@@ -183,12 +185,13 @@ This status reflects the known early MVP baseline, not a live claim about the la
 | Recorded-take playback/seek/pause | Implemented in MVP | PlaybackFlowInstrumentationTest exercises a seeded recorded M4A take, including playback, seek, pause/resume and completion |
 | Microphone AAC/M4A recording | Implemented in MVP | MediaRecorder captures mic only |
 | Local take list and deletion | Implemented in MVP | TakeStore/local storage tests |
-| Synchronized backing + mic recording/mixing | Not implemented | Requires audio-engine design and feature acceptance |
+| Native Oboe full-duplex engine foundation | Implemented in source on feature branch; validation pending | C++/JNI engine, full-duplex stream setup, bounded PCM queues and native smoke tests; exact-head CI and physical validation pending |
+| Synchronized backing + mic recording/mixing | Not implemented | Engine foundation is not yet connected to durable recording and backing-track decoding |
 | Lyrics and Myanmar lyric timing | Not implemented | No accepted pipeline yet |
 | Vocal separation | Not implemented | Model/runtime/license/quality work pending |
 | AI cover arrangement/instrument generation | Not implemented | Separate R&D and license review pending |
 | Vocal effects, Auto Mix, Auto Mastering | Not implemented | DSP/model and acceptance work pending |
-| Live monitoring/Bluetooth compensation | Not implemented | Route/latency benchmarks pending |
+| Live monitoring/Bluetooth compensation | Not accepted | Optional native mic pass-through exists but is disabled by default; physical route/latency tests and feedback policy pending |
 | Background recording/call handling/recovery | Not implemented | Foreground service and lifecycle work pending |
 | Performance scoring/history | Not implemented | Analysis pipeline pending |
 | MP3/AAC/WAV export controls | Not implemented | Current mic recording file is not the full export workflow |
@@ -240,7 +243,7 @@ Do not treat a candidate as selected until evidence is recorded.
 
 | Decision | Current position | Required decision evidence |
 |---|---|---|
-| Audio I/O engine | Open; compare Android native APIs and Oboe | API 31+ device benchmarks, route coverage, drift/glitch/latency, CPU/battery/thermal and fallback |
+| Audio I/O engine | Oboe selected for implementation; AudioRecord/AudioTrack remains benchmark baseline | API 31+ physical benchmarks, route coverage, drift/glitch/latency, CPU/battery/thermal and fallback acceptance |
 | Media decoding/encoding | Use Android-supported codecs initially where suitable; abstraction required | Format support matrix, codec behavior, quality and licensing |
 | DSP/effects | Open | License, performance, audio quality, ABI support and maintainability |
 | AI inference runtime/models | Open | Commercial-use license, model provenance, size, memory, quality, speed and offline behavior |
@@ -254,7 +257,7 @@ Record each final decision as an ADR with date, alternatives, evidence, trade-of
 
 1. Audit the current MVP, repository/PR state, CI and exact-APK evidence.
 2. Keep this architecture aligned with the approved requirements and maintain feature-to-test traceability.
-3. Design and benchmark the synchronized audio engine; prove backing playback plus microphone capture and alignment before adding AI.
+3. Complete and physically validate the selected Oboe engine; integrate durable capture and backing-track PCM playback, then prove synchronization before adding AI.
 4. Implement recording lifecycle, foreground service, call interruption, autosave, drafts and recovery.
 5. Research and benchmark vocal separation and on-device inference candidates.
 6. Add lyrics, vocal processing, monitoring, mixing and mastering incrementally.

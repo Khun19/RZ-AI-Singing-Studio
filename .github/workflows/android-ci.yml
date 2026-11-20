@@ -2,9 +2,9 @@ name: Android CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/oboe-production-audio-engine]
   pull_request:
-    branches: [main]
+    branches: [main, feat/oboe-production-audio-engine]
   workflow_dispatch:
 
 permissions:
@@ -68,7 +68,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v4
       - name: Validate committed Gradle Wrapper
         run: ./gradlew --version
@@ -89,7 +89,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v4
       - name: Enable KVM access when available
         run: |
@@ -170,7 +170,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v4
       - name: Assemble debug APK with committed Wrapper
         run: ./gradlew assembleDebug
@@ -208,7 +208,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - uses: actions/download-artifact@v4
         with:
           name: rz-ai-singing-studio-debug
