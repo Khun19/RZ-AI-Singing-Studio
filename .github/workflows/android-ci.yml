@@ -2,9 +2,9 @@ name: Android CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/oboe-production-audio-engine]
   pull_request:
-    branches: [main]
+    branches: [main, feat/oboe-production-audio-engine]
   workflow_dispatch:
 
 permissions:
