@@ -27,7 +27,7 @@ This repository currently contains an early Android MVP. The existing implementa
 - Basic audio preview using Android MediaPlayer.
 - Microphone recording to AAC/M4A files using Android MediaRecorder.
 - Local take listing and deletion inside the app's private storage.
-- Initial Oboe 1.11.0 native full-duplex engine foundation on the feature branch; CI and physical acceptance pending.
+- Initial Oboe 1.11.0 native full-duplex engine foundation on the feature branch; physical-device test user-confirmed PASS; exact-head CI pending.
 
 The current recorder captures microphone audio only. It does **not yet** synchronize and mix the selected backing track with the microphone recording.
 
@@ -44,7 +44,7 @@ The following product capabilities are **not yet implemented or accepted**:
 - Singing feedback, performance scoring and history.
 - MP3/WAV/AAC export controls, metadata and cover artwork generation.
 - Advanced local library, sharing and storage management.
-- Release signing and verified physical-device acceptance.
+- Release signing and independently inspectable physical-device evidence.
 
 Do not interpret this roadmap as evidence that these features already work. Each feature must pass its own tests and acceptance criteria before being marked complete.
 
@@ -176,7 +176,7 @@ Keep these states separate:
 - Source/CI checks passed.
 - APK built and structurally validated.
 - Exact APK installed and launched on emulator.
-- Exact APK accepted on physical device.
+- Exact APK acceptance evidence not yet attached; user-confirmed device test is recorded separately.
 - Feature-specific acceptance passed.
 
 A CI pass does not imply APK validation, provenance validation or device acceptance. No feature is complete until its own acceptance criteria and evidence pass.
