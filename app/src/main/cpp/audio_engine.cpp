@@ -190,15 +190,10 @@ public:
     }
 
     void onOutputErrorAfterClose(oboe::Result error) {
+        // Error callbacks run on an Oboe-managed thread. Never take the lifecycle
+        // mutex or close streams here; the owner thread performs stop/close.
         mRunning.store(false, std::memory_order_release);
         mLastError.store(static_cast<int32_t>(error), std::memory_order_release);
-        std::lock_guard<std::mutex> guard(mLifecycleMutex);
-        if (mInputStream) {
-            (void) mInputStream->requestStop();
-            (void) mInputStream->close();
-            mInputStream.reset();
-        }
-        mOutputStream.reset();
     }
 
     std::string diagnostics() {
