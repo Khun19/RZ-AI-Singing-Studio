@@ -67,7 +67,7 @@ internal class OboeAacWriter(
             var outputEos = false
             while (!outputEos) {
                 if (!eosSent) {
-                    val inputIndex = codec.dequeueInputBuffer(10_000)
+                    val inputIndex = codec.dequeueInputBuffer(5_000)
                     if (inputIndex >= 0) {
                         val input = codec.getInputBuffer(inputIndex) ?: error("Encoder input buffer unavailable")
                         input.clear()
@@ -77,23 +77,38 @@ internal class OboeAacWriter(
                             floatBuffer.flip()
                             for (i in 0 until count) samples[i] = floatBuffer.get()
                             pcmBytes.clear()
-                            Pcm16Converter.convert(samples.copyOf(count), pcmBytes)
+                            Pcm16Converter.convert(samples, count, pcmBytes)
                             pcmBytes.flip()
                             input.put(pcmBytes)
                             codec.queueInputBuffer(inputIndex, 0, count * 2,
                                 Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
                             totalSamples += count
                         } else if (stopping.get()) {
+                            // Stop capture first, then drain any PCM still buffered in the engine.
                             if (engineStarted) {
                                 engine.stop()
                                 engineStarted = false
                             }
-                            codec.queueInputBuffer(inputIndex, 0, 0,
-                                Pcm16Converter.presentationTimeUs(totalSamples, sampleRate),
-                                MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                            eosSent = true
+                            floatBuffer.clear()
+                            val remaining = engine.readCapturedPcm(floatBuffer, samples.size)
+                            if (remaining > 0) {
+                                floatBuffer.flip()
+                                for (i in 0 until remaining) samples[i] = floatBuffer.get()
+                                pcmBytes.clear()
+                                Pcm16Converter.convert(samples, remaining, pcmBytes)
+                                pcmBytes.flip()
+                                input.put(pcmBytes)
+                                codec.queueInputBuffer(inputIndex, 0, remaining * 2,
+                                    Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
+                                totalSamples += remaining
+                            } else {
+                                codec.queueInputBuffer(inputIndex, 0, 0,
+                                    Pcm16Converter.presentationTimeUs(totalSamples, sampleRate),
+                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                eosSent = true
+                            }
                         } else {
-                            // Empty input buffers are not submitted; retry capture and drain output.
+                            // No PCM yet. Return the input buffer without advancing the sample clock.
                             codec.queueInputBuffer(inputIndex, 0, 0,
                                 Pcm16Converter.presentationTimeUs(totalSamples, sampleRate), 0)
                         }
