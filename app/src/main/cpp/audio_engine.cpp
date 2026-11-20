@@ -112,7 +112,7 @@ public:
         if (result != oboe::Result::OK) {
             closeStreamsLocked();
             mLastError.store(static_cast<int32_t>(result), std::memory_order_release);
-            return static_cast<int32_t>(result);
+            return result;
         }
         mRunning.store(true, std::memory_order_release);
         return oboe::Result::OK;
