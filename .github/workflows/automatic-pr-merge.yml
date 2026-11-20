@@ -54,7 +54,8 @@ jobs:
           set -euo pipefail
           response="$(gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async" \
             -f merge_method=squash \
-            -f expected_head_sha="$EXPECTED_HEAD_SHA")"
+            -f merge_action=default \
+            -f sha="$EXPECTED_HEAD_SHA")"
           status="$(jq -r '.status // empty' <<<"$response")"
           case "$status" in
             pending|enqueued|merged)
