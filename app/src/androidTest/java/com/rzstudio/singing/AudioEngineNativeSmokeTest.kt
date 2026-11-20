@@ -31,6 +31,21 @@ class AudioEngineNativeSmokeTest {
         }
     }
 
+    @Test
+    fun playbackQueueHonorsBufferPositionAndLimit() {
+        AudioEngine().use { engine ->
+            val pcm = ByteBuffer.allocateDirect(256 * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+            repeat(32) { pcm.put(0.25f) }
+            pcm.position(7)
+            pcm.limit(23)
+
+            assertEquals(16, engine.queuePlaybackPcm(pcm))
+            assertEquals(23, pcm.position())
+        }
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun playbackPcmQueueRejectsHeapBuffer() {
         AudioEngine().use { engine ->
