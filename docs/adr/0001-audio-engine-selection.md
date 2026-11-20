@@ -30,7 +30,7 @@ The user has selected Oboe as the engine family, preferring AAudio on the suppor
 
 | Option | Benefits | Costs/risks | License/platform constraints | Evidence |
 |---|---|---|---|---|
-| Oboe | Native callback model, full-duplex helper, AAudio/OpenSL ES abstraction, device quirks handling | C++/NDK/JNI complexity; route and backend behavior still require physical testing | Oboe 1.11.0; Apache-2.0; verify packaged artifact and ABI in CI | Source integration started; physical benchmark NOT RUN |
+| Oboe | Native callback model, full-duplex helper, AAudio/OpenSL ES abstraction, device quirks handling | C++/NDK/JNI complexity; route and backend behavior still require physical testing | Oboe 1.11.0; Apache-2.0; verify packaged artifact and ABI in CI | User-confirmed physical test PASS; detailed benchmark metrics pending |
 | Android AudioRecord + AudioTrack | Platform APIs; direct PCM control; Kotlin integration; benchmark reference | Thread, buffering, synchronization and route behavior must be engineered | Android platform APIs | Existing Termux system-level tests only; app-level prototype NOT RUN |
 | MediaPlayer + MediaRecorder | Minimal MVP path | Does not provide synchronized PCM engine and precise session timeline | Existing Android APIs | Existing MVP source |
 
@@ -45,7 +45,7 @@ The user has selected Oboe as the engine family, preferring AAudio on the suppor
 - Current implementation: native full-duplex capture/output engine foundation with preallocated SPSC PCM queues, optional monitoring, playback PCM queue, capture PCM drain API and stream diagnostics.
 - User confirmed the Oboe physical-device test passed. Detailed raw benchmark evidence (latency percentiles, drift, xrun counts, route matrix and endurance logs) has not been supplied.
 - Physical loopback, sync drift and endurance numeric results: NOT independently inspected; user has confirmed the physical-device test passed.
-- Exact APK and Redmi acceptance: NOT RUN.
+- Exact APK acceptance: NOT RUN. Primary physical-device test: user-confirmed PASS; raw metric evidence pending.
 
 ## 5. Decision
 
