@@ -6,16 +6,34 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: automatic-merge-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
+  recovery-script-validation:
+    name: Validate async merge recovery logic
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check and simulate async merge recovery
+        run: |
+          bash -n .github/scripts/request-async-merge.sh
+          bash -n .github/scripts/test-async-merge-recovery.sh
+          bash .github/scripts/test-async-merge-recovery.sh
+
   enable-github-auto-merge:
     name: Request ruleset-gated asynchronous squash merge
+    needs: [recovery-script-validation]
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
     if: >-
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -44,26 +62,16 @@ jobs:
           ' <<<"$pr" >/dev/null
           echo "PR identity and exact event SHAs verified."
 
-      - name: Request asynchronous squash merge
+      - name: Checkout verified PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Request asynchronous squash merge with UUID reconciliation
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
-        run: |
-          set -euo pipefail
-          response="$(gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async" \
-            -f merge_method=squash \
-            -f merge_action=default \
-            -f sha="$EXPECTED_HEAD_SHA")"
-          status="$(jq -r '.status // empty' <<<"$response")"
-          case "$status" in
-            pending|enqueued|merged)
-              echo "Asynchronous squash merge accepted: $status"
-              ;;
-            *)
-              echo "Unexpected async merge response; failing closed." >&2
-              jq . <<<"$response" >&2
-              exit 1
-              ;;
-          esac
+        run: bash .github/scripts/request-async-merge.sh
