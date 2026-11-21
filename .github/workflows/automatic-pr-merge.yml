@@ -68,7 +68,10 @@ jobs:
               exit 1
             }
 
-            if response="$(gh api --method PUT "$endpoint"               -f merge_method=squash -f merge_action=default -f sha="$EXPECTED_HEAD_SHA" 2>&1)"; then
+            if response="$(gh api --method PUT "$endpoint" \
+              -f merge_method=squash \
+              -f merge_action=default \
+              -f sha="$EXPECTED_HEAD_SHA" 2>&1)"; then
               status="$(jq -r '.status // empty' <<<"$response")"
               case "$status" in
                 pending|enqueued|merged)
