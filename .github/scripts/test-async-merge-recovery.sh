@@ -31,7 +31,7 @@ status=200
 body='{}'
 
 if [[ "$url" == */pulls/7/merge-async/* ]]; then
-  uuid="\${url##*/}"
+  uuid="${url##*/}"
   case "$scenario:$uuid" in
     conflict_then_fail_retry_merged:$UUID1)
       body='{"status":"failed","details":{"message":"old expected head was cancelled"}}'
