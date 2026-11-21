@@ -75,6 +75,9 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
     retry_exhaustion:*)
       body='{"status":"failed","details":{"message":"simulated retryable failure"}}'
       ;;
+    stale_enqueued:*)
+      body='{"status":"enqueued","details":{"message":"queued old head"}}'
+      ;;
     unknown_status:*)
       body='{"status":"waiting_forever","details":{}}'
       ;;
@@ -142,6 +145,10 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       status=409
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
       ;;
+    stale_enqueued)
+      status=409
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      ;;
     enqueued|enqueued_wrong_head)
       status=200
       body='{"status":"enqueued","details":{"message":"already queued"}}'
@@ -191,6 +198,7 @@ run_case timeout 1 "pending request polling budget exhaustion fails closed"
 run_case options_mismatch 1 "existing request with different merge options fails closed"
 run_case malformed_uuid 1 "malformed conflict UUID fails closed"
 run_case expired_request 1 "expired async request lookup fails closed"
+run_case stale_enqueued 1 "stale-head queue state fails closed"
 run_case wrong_merged_head 1 "merge result for a different PR head fails closed"
 run_case retry_exhaustion 1 "bounded submission budget exhaustion fails closed"
 run_case stale_pr 1 "changed PR head fails before submission"
