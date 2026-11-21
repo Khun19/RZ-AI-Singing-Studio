@@ -21,7 +21,8 @@ out="" url="" method="GET"
 while (($#)); do
   case "$1" in
     --output) out="$2"; shift 2 ;;
-    --write-out|--request|--data|--header|--connect-timeout|--max-time) shift 2 ;;
+    --data) printf '%s' "$2" > "$FAKE_CALLS.payload"; shift 2 ;;
+    --write-out|--request|--header|--connect-timeout|--max-time) shift 2 ;;
     --silent|--show-error) shift ;;
     *) url="$1"; shift ;;
   esac
@@ -39,6 +40,18 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
   case "$scenario:$uuid" in
     conflict_then_fail_retry_merged:$UUID1)
       body='{"status":"failed","details":{"message":"old expected head was cancelled"}}'
+      ;;
+    request_payload_bypass_false:$UUID2)
+      polls=0
+      [[ -f "$FAKE_CALLS.payload_polls" ]] && polls="$(cat "$FAKE_CALLS.payload_polls")"
+      polls=$((polls + 1))
+      printf '%s' "$polls" > "$FAKE_CALLS.payload_polls"
+      if [[ "$polls" == "1" ]]; then
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
+      else
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
+        touch "$FAKE_CALLS.merged"
+      fi
       ;;
     conflict_pending_merged:$UUID1)
       polls=0
@@ -203,9 +216,15 @@ run_case() {
     cat "$TMP/out"
     return 1
   fi
+  if [[ "$scenario" == "request_payload_bypass_false" ]] && ! grep -q '"bypass_rules":false' "$CALLS.payload"; then
+    echo "FAIL: request payload did not explicitly set bypass_rules=false"
+    cat "$TMP/out"
+    return 1
+  fi
   echo "PASS: $label"
 }
 
+run_case request_payload_bypass_false 0 "new async request explicitly disables bypass"
 run_case conflict_pending_merged 0 "409 same-head pending request polled until actual merge is verified"
 run_case conflict_enqueued 0 "409 existing queue result accepted only after exact PR revalidation"
 run_case bypass_pending 1 "pending async request with bypass_rules=true fails closed"
