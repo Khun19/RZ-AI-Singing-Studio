@@ -118,6 +118,7 @@ poll_async_request() {
         fi
         request_head="$details_head"
         require_bypass_disabled || return 1
+        bypass_verified=true
         jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
           echo "Pending async request uses unexpected merge options; failing closed." >&2
           return 1
