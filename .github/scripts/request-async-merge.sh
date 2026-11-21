@@ -62,8 +62,8 @@ verify_actual_merge() {
   local expected_merge_sha="${1:-}"
   api_request GET "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" || return
   [[ "$HTTP_STATUS" == "200" ]] || { echo "Cannot verify final PR state (HTTP $HTTP_STATUS)." >&2; return 1; }
-  jq -e '.state == "closed" and .merged == true' "$BODY_FILE" >/dev/null || {
-    echo "Async result says merged, but GitHub PR state does not confirm merged=true." >&2
+  jq -e --arg head "$EXPECTED_HEAD_SHA" '.state == "closed" and .merged == true and .head.sha == $head' "$BODY_FILE" >/dev/null || {
+    echo "Async result says merged, but GitHub does not confirm merged=true for the exact expected PR head." >&2
     return 1
   }
   if [[ -n "$expected_merge_sha" ]]; then
