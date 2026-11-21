@@ -46,6 +46,20 @@ api_request() {
   HTTP_STATUS="$status"
 }
 
+reject_bypass_enabled() {
+  if jq -e '.details.bypass_rules == true' "$BODY_FILE" >/dev/null; then
+    echo "Async merge request has bypass_rules=true; refusing to continue." >&2
+    return 1
+  fi
+}
+
+require_bypass_disabled() {
+  jq -e '.details.bypass_rules == false' "$BODY_FILE" >/dev/null || {
+    echo "Async merge response did not explicitly confirm bypass_rules=false; failing closed." >&2
+    return 1
+  }
+}
+
 validate_current_pr() {
   api_request GET "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" || return
   [[ "$HTTP_STATUS" == "200" ]] || { echo "Unable to revalidate PR (HTTP $HTTP_STATUS)." >&2; return 1; }
@@ -103,6 +117,7 @@ poll_async_request() {
           return 1
         fi
         request_head="$details_head"
+        require_bypass_disabled || return 1
         jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
           echo "Pending async request uses unexpected merge options; failing closed." >&2
           return 1
@@ -121,6 +136,7 @@ poll_async_request() {
         return 10
         ;;
       enqueued)
+        require_bypass_disabled || return 1
         if [[ -n "$request_head" && "$request_head" != "$EXPECTED_HEAD_SHA" ]]; then
           echo "Existing async request was enqueued for a different PR head; failing closed." >&2
           return 1
@@ -130,6 +146,7 @@ poll_async_request() {
         return 11
         ;;
       merged)
+        require_bypass_disabled || return 1
         [[ "$(jq -r '.details.uuid // empty' "$BODY_FILE")" == "" || "$(jq -r '.details.uuid' "$BODY_FILE")" == "$uuid" ]] || {
           echo "Terminal async request UUID mismatch; failing closed." >&2; return 1;
         }
@@ -159,6 +176,7 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
   payload="$(jq -cn --arg sha "$EXPECTED_HEAD_SHA" '{merge_method:"squash",merge_action:"default",sha:$sha}')"
   api_request PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async" "$payload" || exit $?
 
+  reject_bypass_enabled || exit 1
   case "$HTTP_STATUS" in
     202)
       uuid="$(jq -r '.details.uuid // empty' "$BODY_FILE")"
@@ -177,6 +195,7 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
       fi
       ;;
     200)
+      require_bypass_disabled || exit 1
       status="$(jq -r '.status // empty' "$BODY_FILE")"
       case "$status" in
         merged)
