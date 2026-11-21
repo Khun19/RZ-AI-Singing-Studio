@@ -74,7 +74,11 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       ;;
   esac
 elif [[ "$url" == */pulls/7 ]]; then
-  if [[ "$scenario" == "stale_pr" || "$scenario" == "enqueued_wrong_head" ]]; then
+  pr_reads=0
+  [[ -f "$FAKE_CALLS.pr_reads" ]] && pr_reads="$(cat "$FAKE_CALLS.pr_reads")"
+  pr_reads=$((pr_reads + 1))
+  printf '%s' "$pr_reads" > "$FAKE_CALLS.pr_reads"
+  if [[ "$scenario" == "stale_pr" || ( "$scenario" == "enqueued_wrong_head" && "$pr_reads" -gt 2 ) ]]; then
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$OLD_HEAD\"}}"
   elif [[ "$scenario" == "stale_base" ]]; then
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$OLD_HEAD\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$HEAD\"}}"
