@@ -82,7 +82,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       body='{"status":"enqueued","details":{"message":"already in merge queue","bypass_rules":false}}'
       ;;
     bypass_pending:*)
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"bypass_rules\":true,\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":true,\"expected_head_sha\":\"$HEAD\"}}"
       ;;
     bypass_enqueued:*)
       body='{"status":"enqueued","details":{"message":"queued with bypass","bypass_rules":true}}'
@@ -124,6 +124,10 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
     conflict_enqueued)
       status=409
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
+      ;;
+    bypass_conflict)
+      status=409
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":true}}"
       ;;
     conflict_pending_merged)
       status=409
