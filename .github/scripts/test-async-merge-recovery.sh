@@ -94,7 +94,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       polls=$((polls + 1))
       printf '%s' "$polls" > "$FAKE_CALLS.stale_polls"
       if [[ "$polls" == "1" ]]; then
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$OLD_HEAD\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$OLD_HEAD\"}}"
       else
         body='{"status":"enqueued","details":{"message":"queued old head"}}'
       fi
@@ -108,7 +108,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       polls=$((polls + 1))
       printf '%s' "$polls" > "$FAKE_CALLS.enqueued_polls"
       if [[ "$polls" == "1" ]]; then
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       else
         body='{"status":"enqueued","details":{"message":"already in merge queue"}}'
       fi
@@ -192,7 +192,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     malformed_uuid)
       status=409
-      body='{"status":"pending","details":{"uuid":"not-a-uuid","merge_method":"squash","merge_action":"default","bypass_rules":false}}'
+      body='{"status":"pending","details":{"uuid":"not-a-uuid","merge_method":"squash","merge_action":"default"}}'
       ;;
     expired_request)
       status=409
