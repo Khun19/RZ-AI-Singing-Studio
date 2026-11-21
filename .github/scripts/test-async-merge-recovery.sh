@@ -21,7 +21,7 @@ out="" url="" method="GET"
 while (($#)); do
   case "$1" in
     --output) out="$2"; shift 2 ;;
-    --write-out|--request|--data|--header) shift 2 ;;
+    --write-out|--request|--data|--header|--connect-timeout|--max-time) shift 2 ;;
     --silent|--show-error) shift ;;
     *) url="$1"; shift ;;
   esac
