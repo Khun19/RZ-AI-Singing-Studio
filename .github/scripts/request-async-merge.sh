@@ -121,6 +121,10 @@ poll_async_request() {
         return 10
         ;;
       enqueued)
+        [[ "$request_head" == "$EXPECTED_HEAD_SHA" ]] || {
+          echo "Existing async request was enqueued for a different or unknown PR head; failing closed." >&2
+          return 1
+        }
         validate_current_pr || return 1
         echo "Async request $uuid is enqueued. This is not a merge confirmation."
         return 11
