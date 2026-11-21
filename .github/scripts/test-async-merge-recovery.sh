@@ -40,6 +40,18 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
     conflict_then_fail_retry_merged:$UUID1)
       body='{"status":"failed","details":{"message":"old expected head was cancelled"}}'
       ;;
+    conflict_pending_merged:$UUID1)
+      polls=0
+      [[ -f "$FAKE_CALLS.pending_polls" ]] && polls="$(cat "$FAKE_CALLS.pending_polls")"
+      polls=$((polls + 1))
+      printf '%s' "$polls" > "$FAKE_CALLS.pending_polls"
+      if [[ "$polls" == "1" ]]; then
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      else
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
+        touch "$FAKE_CALLS.merged"
+      fi
+      ;;
     conflict_then_fail_retry_merged:$UUID2)
       polls=0
       [[ -f "$FAKE_CALLS.polls" ]] && polls="$(cat "$FAKE_CALLS.polls")"
@@ -97,6 +109,10 @@ elif [[ "$url" == */pulls/7 ]]; then
   fi
 elif [[ "$url" == */pulls/7/merge-async ]]; then
   case "$scenario" in
+    conflict_pending_merged)
+      status=409
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      ;;
     conflict_then_fail_retry_merged)
       puts=0
       [[ -f "$FAKE_CALLS.puts" ]] && puts="$(cat "$FAKE_CALLS.puts")"
@@ -166,7 +182,8 @@ run_case() {
   echo "PASS: $label"
 }
 
-run_case conflict_then_fail_retry_merged 0 "409 existing request reconciled, latest SHA retried, actual merge verified"
+run_case conflict_pending_merged 0 "409 same-head pending request polled until actual merge is verified"
+run_case conflict_then_fail_retry_merged 0 "409 stale request reconciled, latest SHA retried, actual merge verified"
 run_case unknown_status 1 "unknown async status fails closed"
 run_case wrong_uuid 1 "pending result UUID mismatch fails closed"
 run_case wrong_request_head 1 "pending result expected-head mismatch fails closed"
