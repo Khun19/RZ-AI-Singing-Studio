@@ -52,6 +52,10 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       status=404
       body='{"message":"Not Found"}'
       ;;
+    wrong_merged_head:*)
+      body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
+      touch "$FAKE_CALLS.merged"
+      ;;
     unknown_status:*)
       body='{"status":"waiting_forever","details":{}}'
       ;;
@@ -66,7 +70,9 @@ elif [[ "$url" == */pulls/7 ]]; then
   if [[ "$scenario" == "stale_pr" ]]; then
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$OLD_HEAD\"}}"
   elif [[ -f "$FAKE_CALLS.merged" ]]; then
-    body="{\"state\":\"closed\",\"merged\":true,\"draft\":false,\"head\":{\"sha\":\"$HEAD\"},\"merge_commit_sha\":\"$MERGE\"}"
+    merged_head="$HEAD"
+    [[ "$scenario" == "wrong_merged_head" ]] && merged_head="$OLD_HEAD"
+    body="{\"state\":\"closed\",\"merged\":true,\"draft\":false,\"head\":{\"sha\":\"$merged_head\"},\"merge_commit_sha\":\"$MERGE\"}"
   else
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$HEAD\"}}"
   fi
@@ -143,6 +149,7 @@ run_case timeout 1 "pending request polling budget exhaustion fails closed"
 run_case options_mismatch 1 "existing request with different merge options fails closed"
 run_case malformed_uuid 1 "malformed conflict UUID fails closed"
 run_case expired_request 1 "expired async request lookup fails closed"
+run_case wrong_merged_head 1 "merge result for a different PR head fails closed"
 run_case stale_pr 1 "changed PR head fails before submission"
 run_case api_error 1 "non-409 API error fails closed"
 run_case enqueued 0 "merge-queue enqueue is not reported as merged"
