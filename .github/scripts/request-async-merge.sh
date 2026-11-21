@@ -187,7 +187,7 @@ validate_current_pr
 
 for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
   validate_current_pr
-  payload="$(jq -cn --arg sha "$EXPECTED_HEAD_SHA" '{merge_method:"squash",merge_action:"default",sha:$sha}')"
+  payload="$(jq -cn --arg sha "$EXPECTED_HEAD_SHA" '{merge_method:"squash",merge_action:"default",bypass_rules:false,sha:$sha}')"
   api_request PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async" "$payload" || exit $?
 
   reject_bypass_enabled || exit 1
