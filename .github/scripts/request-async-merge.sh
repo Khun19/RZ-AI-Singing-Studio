@@ -163,9 +163,6 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
       if [[ -n "$request_head" && "$request_head" != "$EXPECTED_HEAD_SHA" ]]; then
         echo "202 response expected-head SHA does not match this event." >&2; exit 1;
       fi
-      jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
-        echo "202 response merge options mismatch." >&2; exit 1;
-      }
       if poll_async_request "$uuid" "$request_head"; then exit 0; else poll_result=$?; fi
       if [[ "$poll_result" -eq 11 ]]; then exit 0; fi
       if [[ "$poll_result" -ne 10 ]]; then
