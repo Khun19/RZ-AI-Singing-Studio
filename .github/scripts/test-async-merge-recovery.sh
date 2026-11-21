@@ -41,6 +41,10 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
     conflict_then_fail_retry_merged:$UUID1)
       body='{"status":"failed","details":{"message":"old expected head was cancelled"}}'
       ;;
+    expired_request:*)
+      status=404
+      body='{"message":"Not Found"}'
+      ;;
     conflict_then_fail_retry_merged:$UUID2)
       polls="$(grep -c "poll2" "$FAKE_CALLS.poll" 2>/dev/null || echo 0)"
       printf 'poll2\n' >> "$FAKE_CALLS.poll"
@@ -86,6 +90,14 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       status=409
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"merge\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
       ;;
+    malformed_uuid)
+      status=409
+      body='{"status":"pending","details":{"uuid":"not-a-uuid","merge_method":"squash","merge_action":"default"}}'
+      ;;
+    expired_request)
+      status=409
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+      ;;
     enqueued)
       status=200
       body='{"status":"enqueued","details":{"message":"already queued"}}'
@@ -125,6 +137,8 @@ run_case conflict_then_fail_retry_merged 0 "409 stale request reconciled, latest
 run_case unknown_status 1 "unknown async status fails closed"
 run_case timeout 1 "pending request poll exhaustion fails closed"
 run_case options_mismatch 1 "existing request with different merge options fails closed"
+run_case malformed_uuid 1 "malformed conflict UUID fails closed"
+run_case expired_request 1 "expired async request lookup fails closed"
 run_case stale_pr 1 "changed PR head fails before submission"
 run_case enqueued 0 "merge-queue enqueue is accepted but not reported as merged"
 
