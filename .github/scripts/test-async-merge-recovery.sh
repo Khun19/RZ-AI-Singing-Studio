@@ -85,7 +85,7 @@ elif [[ "$url" == */pulls/7 ]]; then
   elif [[ -f "$FAKE_CALLS.merged" ]]; then
     merged_head="$HEAD"
     [[ "$scenario" == "wrong_merged_head" ]] && merged_head="$OLD_HEAD"
-    body="{\"state\":\"closed\",\"merged\":true,\"draft\":false,\"head\":{\"sha\":\"$merged_head\"},\"merge_commit_sha\":\"$MERGE\"}"
+    body="{\"state\":\"closed\",\"merged\":true,\"draft\":false,\"base\":{\"ref\":\"main\"},\"head\":{\"sha\":\"$merged_head\"},\"merge_commit_sha\":\"$MERGE\"}"
   else
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$HEAD\"}}"
   fi
