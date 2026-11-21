@@ -123,7 +123,7 @@ run_case() {
     EXPECTED_HEAD_SHA="$HEAD" EXPECTED_BASE_SHA="$BASE" \
     CURL_BIN="$FAKE_CURL" SLEEP_BIN=true MAX_POLLS=2 POLL_INTERVAL_SECONDS=0 \
     MAX_SUBMISSIONS=2 FAKE_SCENARIO="$scenario" FAKE_CALLS="$CALLS" \
-    bash "$ROOT/.github/scripts/request-async-merge.sh" >"$TMP/out" 2>&1; then
+    bash "$SCRIPT_DIR/request-async-merge.sh" >"$TMP/out" 2>&1; then
     rc=0
   else
     rc=$?
