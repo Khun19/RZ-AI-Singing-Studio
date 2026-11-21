@@ -29,7 +29,8 @@ done
 api_request() {
   local method="$1" path="$2" payload="${3:-}" status
   local -a args
-  args=(--silent --show-error --output "$BODY_FILE" --write-out '%{http_code}'
+  args=(--silent --show-error --connect-timeout 10 --max-time 30
+    --output "$BODY_FILE" --write-out '%{http_code}'
     --request "$method"
     --header "Authorization: Bearer $GH_TOKEN"
     --header "Accept: application/vnd.github+json"
