@@ -66,7 +66,7 @@ elif [[ "$url" == */pulls/7 ]]; then
   if [[ "$scenario" == "stale_pr" ]]; then
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$OLD_HEAD\"}}"
   elif [[ -f "$FAKE_CALLS.merged" ]]; then
-    body="{\"state\":\"closed\",\"merged\":true,\"draft\":false,\"merge_commit_sha\":\"$MERGE\"}"
+    body="{\"state\":\"closed\",\"merged\":true,\"draft\":false,\"head\":{\"sha\":\"$HEAD\"},\"merge_commit_sha\":\"$MERGE\"}"
   else
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$HEAD\"}}"
   fi
