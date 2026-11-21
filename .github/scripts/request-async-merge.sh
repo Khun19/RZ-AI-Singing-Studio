@@ -162,6 +162,11 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
         echo "202 response merge options mismatch." >&2; exit 1;
       }
       if poll_async_request "$uuid" "$request_head"; then exit 0; else poll_result=$?; fi
+      if [[ "$poll_result" -eq 11 ]]; then exit 0; fi
+      if [[ "$poll_result" -ne 10 ]]; then
+        echo "Async request did not reach a safely recoverable failed state." >&2
+        exit 1
+      fi
       ;;
     200)
       status="$(jq -r '.status // empty' "$BODY_FILE")"
