@@ -78,6 +78,9 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
     stale_enqueued:*)
       body='{"status":"enqueued","details":{"message":"queued old head"}}'
       ;;
+    conflict_enqueued:*)
+      body='{"status":"enqueued","details":{"message":"already in merge queue"}}'
+      ;;
     unknown_status:*)
       body='{"status":"waiting_forever","details":{}}'
       ;;
@@ -112,6 +115,10 @@ elif [[ "$url" == */pulls/7 ]]; then
   fi
 elif [[ "$url" == */pulls/7/merge-async ]]; then
   case "$scenario" in
+    conflict_enqueued)
+      status=409
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+      ;;
     conflict_pending_merged)
       status=409
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
@@ -190,6 +197,7 @@ run_case() {
 }
 
 run_case conflict_pending_merged 0 "409 same-head pending request polled until actual merge is verified"
+run_case conflict_enqueued 0 "409 existing queue result accepted only after exact PR revalidation"
 run_case conflict_then_fail_retry_merged 0 "409 stale request reconciled, latest SHA retried, actual merge verified"
 run_case unknown_status 1 "unknown async status fails closed"
 run_case wrong_uuid 1 "pending result UUID mismatch fails closed"
