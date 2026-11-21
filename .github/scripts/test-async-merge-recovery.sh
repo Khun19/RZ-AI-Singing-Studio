@@ -46,9 +46,9 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       polls=$((polls + 1))
       printf '%s' "$polls" > "$FAKE_CALLS.pending_polls"
       if [[ "$polls" == "1" ]]; then
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       else
-        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
         touch "$FAKE_CALLS.merged"
       fi
       ;;
@@ -58,9 +58,9 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       polls=$((polls + 1))
       printf '%s' "$polls" > "$FAKE_CALLS.polls"
       if [[ "$polls" == "1" ]]; then
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       else
-        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
         touch "$FAKE_CALLS.merged"
       fi
       ;;
@@ -69,20 +69,20 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       body='{"message":"Not Found"}'
       ;;
     wrong_merged_head:*)
-      body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
+      body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
       touch "$FAKE_CALLS.merged"
       ;;
     retry_exhaustion:*)
       body='{"status":"failed","details":{"message":"simulated retryable failure"}}'
       ;;
     stale_enqueued:*)
-      body='{"status":"enqueued","details":{"message":"queued old head"}}'
+      body='{"status":"enqueued","details":{"message":"queued old head","bypass_rules":false}}'
       ;;
     conflict_enqueued:*)
       body='{"status":"enqueued","details":{"message":"already in merge queue","bypass_rules":false}}'
       ;;
     bypass_pending:*)
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":true,\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"bypass_rules\":true,\"expected_head_sha\":\"$HEAD\"}}"
       ;;
     bypass_enqueued:*)
       body='{"status":"enqueued","details":{"message":"queued with bypass","bypass_rules":true}}'
@@ -91,13 +91,13 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       body='{"status":"waiting_forever","details":{}}'
       ;;
     wrong_uuid:*)
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       ;;
     wrong_request_head:*)
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$OLD_HEAD\"}}"
       ;;
     timeout:*)
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       ;;
     *)
       body='{"status":"failed","details":{"message":"unexpected request"}}'
@@ -123,11 +123,11 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
   case "$scenario" in
     conflict_enqueued)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
       ;;
     conflict_pending_merged)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       ;;
     conflict_then_fail_retry_merged)
       puts=0
@@ -136,19 +136,19 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       printf '%s' "$puts" > "$FAKE_CALLS.puts"
       if [[ "$puts" == "1" ]]; then
         status=409
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
       else
         status=202
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       fi
       ;;
     options_mismatch)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"merge\",\"merge_action\":\"default\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"merge\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
       ;;
     retry_exhaustion)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
       ;;
     malformed_uuid)
       status=409
@@ -156,15 +156,15 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     expired_request)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
       ;;
     stale_enqueued)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$OLD_HEAD\"}}"
       ;;
     enqueued|enqueued_wrong_head)
       status=200
-      body='{"status":"enqueued","details":{"message":"already queued"}}'
+      body='{"status":"enqueued","details":{"message":"already queued","bypass_rules":false}}'
       ;;
     api_error)
       status=422
@@ -172,7 +172,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     *)
       status=202
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       ;;
   esac
 fi
