@@ -1,6 +1,9 @@
 name: Automatic Pull Request Merge
 
 on:
+  pull_request:
+    branches: ['**']
+    types: [opened, reopened, synchronize, ready_for_review]
   pull_request_target:
     branches: [main]
     types: [opened, reopened, synchronize, ready_for_review]
@@ -39,6 +42,7 @@ jobs:
       contents: write
       pull-requests: read
     if: >-
+      github.event_name == 'pull_request_target' &&
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.draft == false
