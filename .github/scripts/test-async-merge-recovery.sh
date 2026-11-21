@@ -200,7 +200,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     stale_enqueued)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$OLD_HEAD\"}}"
       ;;
     already_merged_200)
       status=200
