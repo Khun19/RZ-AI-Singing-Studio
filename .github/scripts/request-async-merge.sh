@@ -91,7 +91,7 @@ verify_actual_merge() {
 }
 
 poll_async_request() {
-  local uuid="$1" request_head="$2" attempt status details_head details_uuid
+  local uuid="$1" request_head="$2" bypass_verified="${3:-false}" attempt status details_head details_uuid
   for ((attempt=1; attempt<=MAX_POLLS; attempt++)); do
     api_request GET "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async/$uuid" || return
     [[ "$HTTP_STATUS" == "200" ]] || {
@@ -136,7 +136,14 @@ poll_async_request() {
         return 10
         ;;
       enqueued)
-        require_bypass_disabled || return 1
+        reject_bypass_enabled || return 1
+        if jq -e '.details.bypass_rules == false' "$BODY_FILE" >/dev/null; then
+          bypass_verified=true
+        fi
+        [[ "$bypass_verified" == "true" ]] || {
+          echo "Enqueued async request has no verified bypass_rules=false state; failing closed." >&2
+          return 1
+        }
         if [[ -n "$request_head" && "$request_head" != "$EXPECTED_HEAD_SHA" ]]; then
           echo "Existing async request was enqueued for a different PR head; failing closed." >&2
           return 1
@@ -146,7 +153,14 @@ poll_async_request() {
         return 11
         ;;
       merged)
-        require_bypass_disabled || return 1
+        reject_bypass_enabled || return 1
+        if jq -e '.details.bypass_rules == false' "$BODY_FILE" >/dev/null; then
+          bypass_verified=true
+        fi
+        [[ "$bypass_verified" == "true" ]] || {
+          echo "Merged async request has no verified bypass_rules=false state; failing closed." >&2
+          return 1
+        }
         [[ "$(jq -r '.details.uuid // empty' "$BODY_FILE")" == "" || "$(jq -r '.details.uuid' "$BODY_FILE")" == "$uuid" ]] || {
           echo "Terminal async request UUID mismatch; failing closed." >&2; return 1;
         }
@@ -187,7 +201,7 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
       if [[ -n "$request_head" && "$request_head" != "$EXPECTED_HEAD_SHA" ]]; then
         echo "202 response expected-head SHA does not match this event." >&2; exit 1;
       fi
-      if poll_async_request "$uuid" "$request_head"; then exit 0; else poll_result=$?; fi
+      if poll_async_request "$uuid" "$request_head" true; then exit 0; else poll_result=$?; fi
       if [[ "$poll_result" -eq 11 ]]; then exit 0; fi
       if [[ "$poll_result" -ne 10 ]]; then
         echo "Async request did not reach a safely recoverable failed state." >&2
@@ -228,8 +242,12 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
       jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
         echo "Existing async request uses unexpected merge options; failing closed." >&2; exit 1;
       }
+      bypass_verified=false
+      if jq -e '.details.bypass_rules == false' "$BODY_FILE" >/dev/null; then
+        bypass_verified=true
+      fi
       echo "409 conflict references existing request $uuid for head $request_head; reconciling it."
-      if poll_async_request "$uuid" "$request_head"; then exit 0; else poll_result=$?; fi
+      if poll_async_request "$uuid" "$request_head" "$bypass_verified"; then exit 0; else poll_result=$?; fi
       if [[ "$poll_result" -eq 11 ]]; then exit 0; fi
       if [[ "$poll_result" -ne 10 ]]; then
         echo "Existing request did not reach a safely recoverable failed state." >&2
