@@ -85,27 +85,32 @@ poll_async_request() {
     }
 
     status="$(jq -r '.status // empty' "$BODY_FILE")"
-    details_uuid="$(jq -r '.details.uuid // empty' "$BODY_FILE")"
-    details_head="$(jq -r '.details.expected_head_sha // empty' "$BODY_FILE")"
-    [[ "$details_uuid" == "$uuid" ]] || {
-      echo "Async request UUID mismatch; failing closed." >&2
-      return 1
-    }
-    [[ "$details_head" == "$request_head" ]] || {
-      echo "Async request expected-head identity changed; failing closed." >&2
-      return 1
-    }
-    jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
-      echo "Existing async request uses unexpected merge options; failing closed." >&2
-      return 1
-    }
-
     case "$status" in
       pending)
+        details_uuid="$(jq -r '.details.uuid // empty' "$BODY_FILE")"
+        details_head="$(jq -r '.details.expected_head_sha // empty' "$BODY_FILE")"
+        [[ "$details_uuid" == "$uuid" ]] || {
+          echo "Pending async request UUID mismatch; failing closed." >&2
+          return 1
+        }
+        [[ "$details_head" == "$request_head" ]] || {
+          echo "Pending async request expected-head identity changed; failing closed." >&2
+          return 1
+        }
+        jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
+          echo "Pending async request uses unexpected merge options; failing closed." >&2
+          return 1
+        }
         echo "Async request $uuid remains pending (poll $attempt/$MAX_POLLS)."
         if (( attempt < MAX_POLLS )); then "$SLEEP_BIN" "$POLL_INTERVAL_SECONDS"; fi
         ;;
       failed)
+        [[ "$(jq -r '.details.uuid // empty' "$BODY_FILE")" == "" || "$(jq -r '.details.uuid' "$BODY_FILE")" == "$uuid" ]] || {
+          echo "Terminal async request UUID mismatch; failing closed." >&2; return 1;
+        }
+        [[ "$(jq -r '.details.expected_head_sha // empty' "$BODY_FILE")" == "" || "$(jq -r '.details.expected_head_sha' "$BODY_FILE")" == "$request_head" ]] || {
+          echo "Terminal async request head mismatch; failing closed." >&2; return 1;
+        }
         echo "Async request $uuid failed: $(jq -r '.details.message // "no failure message supplied"' "$BODY_FILE")"
         return 10
         ;;
@@ -114,6 +119,9 @@ poll_async_request() {
         return 11
         ;;
       merged)
+        [[ "$(jq -r '.details.uuid // empty' "$BODY_FILE")" == "" || "$(jq -r '.details.uuid' "$BODY_FILE")" == "$uuid" ]] || {
+          echo "Terminal async request UUID mismatch; failing closed." >&2; return 1;
+        }
         local merge_sha
         merge_sha="$(jq -r '.details.sha // empty' "$BODY_FILE")"
         [[ "$merge_sha" =~ ^[0-9a-f]{40}$ ]] || {
