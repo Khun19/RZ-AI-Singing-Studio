@@ -12,6 +12,7 @@ BASE="cccccccccccccccccccccccccccccccccccccccc"
 MERGE="dddddddddddddddddddddddddddddddddddddddd"
 UUID1="11111111-1111-4111-8111-111111111111"
 UUID2="22222222-2222-4222-8222-222222222222"
+export HEAD OLD_HEAD BASE MERGE UUID1 UUID2
 
 cat > "$FAKE_CURL" <<'FAKE'
 #!/usr/bin/env bash
