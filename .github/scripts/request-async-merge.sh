@@ -62,7 +62,7 @@ verify_actual_merge() {
   local expected_merge_sha="${1:-}"
   api_request GET "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" || return
   [[ "$HTTP_STATUS" == "200" ]] || { echo "Cannot verify final PR state (HTTP $HTTP_STATUS)." >&2; return 1; }
-  jq -e --arg head "$EXPECTED_HEAD_SHA" '.state == "closed" and .merged == true and .head.sha == $head' "$BODY_FILE" >/dev/null || {
+  jq -e --arg head "$EXPECTED_HEAD_SHA" '.state == "closed" and .merged == true and .base.ref == "main" and .head.sha == $head' "$BODY_FILE" >/dev/null || {
     echo "Async result says merged, but GitHub does not confirm merged=true for the exact expected PR head." >&2
     return 1
   }
@@ -120,6 +120,7 @@ poll_async_request() {
         return 10
         ;;
       enqueued)
+        validate_current_pr || return 1
         echo "Async request $uuid is enqueued. This is not a merge confirmation."
         return 11
         ;;
@@ -180,6 +181,7 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
           exit $?
           ;;
         enqueued)
+          validate_current_pr
           echo "PR is already in the merge queue. Enqueued is not merged."
           exit 0
           ;;
