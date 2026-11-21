@@ -49,7 +49,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       if [[ "$polls" == "1" ]]; then
         body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       else
-        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
         touch "$FAKE_CALLS.merged"
       fi
       ;;
@@ -61,7 +61,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       if [[ "$polls" == "1" ]]; then
         body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       else
-        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
         touch "$FAKE_CALLS.merged"
       fi
       ;;
@@ -73,7 +73,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       if [[ "$polls" == "1" ]]; then
         body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
       else
-        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
+        body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
         touch "$FAKE_CALLS.merged"
       fi
       ;;
@@ -82,17 +82,36 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       body='{"message":"Not Found"}'
       ;;
     wrong_merged_head:*)
-      body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\",\"bypass_rules\":false}}"
+      body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
       touch "$FAKE_CALLS.merged"
       ;;
     retry_exhaustion:*)
       body='{"status":"failed","details":{"message":"simulated retryable failure"}}'
       ;;
     stale_enqueued:*)
-      body='{"status":"enqueued","details":{"message":"queued old head","bypass_rules":false}}'
+      polls=0
+      [[ -f "$FAKE_CALLS.stale_polls" ]] && polls="$(cat "$FAKE_CALLS.stale_polls")"
+      polls=$((polls + 1))
+      printf '%s' "$polls" > "$FAKE_CALLS.stale_polls"
+      if [[ "$polls" == "1" ]]; then
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      else
+        body='{"status":"enqueued","details":{"message":"queued old head"}}'
+      fi
       ;;
     conflict_enqueued:*)
-      body='{"status":"enqueued","details":{"message":"already in merge queue","bypass_rules":false}}'
+      body='{"status":"enqueued","details":{"message":"already in merge queue"}}'
+      ;;
+    conflict_pending_enqueued:*)
+      polls=0
+      [[ -f "$FAKE_CALLS.enqueued_polls" ]] && polls="$(cat "$FAKE_CALLS.enqueued_polls")"
+      polls=$((polls + 1))
+      printf '%s' "$polls" > "$FAKE_CALLS.enqueued_polls"
+      if [[ "$polls" == "1" ]]; then
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      else
+        body='{"status":"enqueued","details":{"message":"already in merge queue"}}'
+      fi
       ;;
     bypass_pending:*)
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":true,\"expected_head_sha\":\"$HEAD\"}}"
@@ -136,7 +155,11 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
   case "$scenario" in
     conflict_enqueued)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
+      ;;
+    conflict_pending_enqueued)
+      status=409
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
       ;;
     bypass_conflict)
       status=409
@@ -144,7 +167,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     conflict_pending_merged)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
       ;;
     conflict_then_fail_retry_merged)
       puts=0
@@ -153,19 +176,19 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       printf '%s' "$puts" > "$FAKE_CALLS.puts"
       if [[ "$puts" == "1" ]]; then
         status=409
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
       else
         status=202
-        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
+        body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
       fi
       ;;
     options_mismatch)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"merge\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"merge\",\"merge_action\":\"default\"}}"
       ;;
     retry_exhaustion)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
       ;;
     malformed_uuid)
       status=409
@@ -173,11 +196,19 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     expired_request)
       status=409
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
       ;;
     stale_enqueued)
       status=409
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      ;;
+    already_merged_200)
+      status=200
+      body="{\"status\":\"merged\",\"details\":{\"sha\":\"$MERGE\"}}"
+      ;;
+    already_enqueued_unknown)
+      status=200
+      body='{"status":"enqueued","details":{"message":"already queued"}}'
       ;;
     enqueued|enqueued_wrong_head)
       status=200
@@ -189,7 +220,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     *)
       status=202
-      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":false,\"expected_head_sha\":\"$HEAD\"}}"
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
       ;;
   esac
 fi
@@ -226,7 +257,8 @@ run_case() {
 
 run_case request_payload_bypass_false 0 "new async request explicitly disables bypass"
 run_case conflict_pending_merged 0 "409 same-head pending request polled until actual merge is verified"
-run_case conflict_enqueued 0 "409 existing queue result accepted only after exact PR revalidation"
+run_case conflict_enqueued 1 "409 immediate queue state without bypass proof fails closed"
+run_case conflict_pending_enqueued 0 "pending no-bypass proof permits later queue state"
 run_case bypass_pending 1 "pending async request with bypass_rules=true fails closed"
 run_case bypass_enqueued 1 "enqueued async request with bypass_rules=true fails closed"
 run_case bypass_conflict 1 "409 response with bypass_rules=true fails closed"
@@ -245,7 +277,9 @@ run_case stale_pr 1 "changed PR head fails before submission"
 run_case stale_base 1 "changed PR base fails before submission"
 run_case api_error 1 "non-409 API error fails closed"
 run_case transport_error 90 "transport failure fails closed"
-run_case enqueued 0 "merge-queue enqueue is not reported as merged"
+run_case enqueued 0 "merge-queue enqueue with explicit no-bypass proof is not reported as merged"
+run_case already_merged_200 1 "already-merged 200 without bypass metadata fails closed"
+run_case already_enqueued_unknown 1 "already-enqueued 200 without bypass metadata fails closed"
 run_case enqueued_wrong_head 1 "queue state for a different PR head fails closed"
 
 echo "All async merge recovery tests passed."
