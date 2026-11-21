@@ -93,10 +93,15 @@ poll_async_request() {
           echo "Pending async request UUID mismatch; failing closed." >&2
           return 1
         }
-        [[ "$details_head" == "$request_head" ]] || {
-          echo "Pending async request expected-head identity changed; failing closed." >&2
+        [[ "$details_head" =~ ^[0-9a-f]{40}$ ]] || {
+          echo "Pending async request omitted a valid expected-head SHA; failing closed." >&2
           return 1
         }
+        if [[ -n "$request_head" && "$details_head" != "$request_head" ]]; then
+          echo "Pending async request expected-head identity changed; failing closed." >&2
+          return 1
+        fi
+        request_head="$details_head"
         jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
           echo "Pending async request uses unexpected merge options; failing closed." >&2
           return 1
@@ -155,9 +160,9 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
       [[ "$uuid" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || {
         echo "202 response did not include a valid async request UUID." >&2; exit 1;
       }
-      [[ "$request_head" == "$EXPECTED_HEAD_SHA" ]] || {
+      if [[ -n "$request_head" && "$request_head" != "$EXPECTED_HEAD_SHA" ]]; then
         echo "202 response expected-head SHA does not match this event." >&2; exit 1;
-      }
+      fi
       jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
         echo "202 response merge options mismatch." >&2; exit 1;
       }
@@ -193,9 +198,10 @@ for ((submission=1; submission<=MAX_SUBMISSIONS; submission++)); do
       [[ "$uuid" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || {
         echo "409 response did not include a valid existing request UUID; failing closed." >&2; exit 1;
       }
-      [[ "$request_head" =~ ^[0-9a-f]{40}$ ]] || {
-        echo "409 response omitted a valid existing request head SHA; failing closed." >&2; exit 1;
-      }
+      if [[ -n "$request_head" && ! "$request_head" =~ ^[0-9a-f]{40}$ ]]; then
+        echo "409 response supplied an invalid existing request head SHA; failing closed." >&2
+        exit 1
+      fi
       jq -e '.details.merge_method == "squash" and .details.merge_action == "default"' "$BODY_FILE" >/dev/null || {
         echo "Existing async request uses unexpected merge options; failing closed." >&2; exit 1;
       }
