@@ -79,7 +79,13 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       body='{"status":"enqueued","details":{"message":"queued old head"}}'
       ;;
     conflict_enqueued:*)
-      body='{"status":"enqueued","details":{"message":"already in merge queue"}}'
+      body='{"status":"enqueued","details":{"message":"already in merge queue","bypass_rules":false}}'
+      ;;
+    bypass_pending:*)
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"bypass_rules\":true,\"expected_head_sha\":\"$HEAD\"}}"
+      ;;
+    bypass_enqueued:*)
+      body='{"status":"enqueued","details":{"message":"queued with bypass","bypass_rules":true}}'
       ;;
     unknown_status:*)
       body='{"status":"waiting_forever","details":{}}'
@@ -146,7 +152,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       ;;
     malformed_uuid)
       status=409
-      body='{"status":"pending","details":{"uuid":"not-a-uuid","merge_method":"squash","merge_action":"default"}}'
+      body='{"status":"pending","details":{"uuid":"not-a-uuid","merge_method":"squash","merge_action":"default","bypass_rules":false}}'
       ;;
     expired_request)
       status=409
@@ -198,6 +204,9 @@ run_case() {
 
 run_case conflict_pending_merged 0 "409 same-head pending request polled until actual merge is verified"
 run_case conflict_enqueued 0 "409 existing queue result accepted only after exact PR revalidation"
+run_case bypass_pending 1 "pending async request with bypass_rules=true fails closed"
+run_case bypass_enqueued 1 "enqueued async request with bypass_rules=true fails closed"
+run_case bypass_conflict 1 "409 response with bypass_rules=true fails closed"
 run_case conflict_then_fail_retry_merged 0 "409 stale request reconciled, latest SHA retried, actual merge verified"
 run_case unknown_status 1 "unknown async status fails closed"
 run_case wrong_uuid 1 "pending result UUID mismatch fails closed"
