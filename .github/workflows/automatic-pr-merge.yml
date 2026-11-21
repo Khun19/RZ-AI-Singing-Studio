@@ -1,7 +1,7 @@
 name: Automatic Pull Request Merge
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     types: [opened, reopened, synchronize, ready_for_review]
 
@@ -21,6 +21,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
       - name: Syntax-check and simulate async merge recovery
         run: |
           bash -n .github/scripts/request-async-merge.sh
@@ -62,10 +65,11 @@ jobs:
           ' <<<"$pr" >/dev/null
           echo "PR identity and exact event SHAs verified."
 
-      - name: Checkout verified PR source
+      - name: Checkout trusted base-branch automation
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
       - name: Request asynchronous squash merge with UUID reconciliation
         env:
           GH_TOKEN: ${{ github.token }}
