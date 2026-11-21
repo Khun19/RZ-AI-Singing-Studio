@@ -66,6 +66,12 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
     unknown_status:*)
       body='{"status":"waiting_forever","details":{}}'
       ;;
+    wrong_uuid:*)
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
+      ;;
+    wrong_request_head:*)
+      body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$OLD_HEAD\"}}"
+      ;;
     timeout:*)
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID2\",\"merge_method\":\"squash\",\"merge_action\":\"default\",\"expected_head_sha\":\"$HEAD\"}}"
       ;;
@@ -162,6 +168,8 @@ run_case() {
 
 run_case conflict_then_fail_retry_merged 0 "409 existing request reconciled, latest SHA retried, actual merge verified"
 run_case unknown_status 1 "unknown async status fails closed"
+run_case wrong_uuid 1 "pending result UUID mismatch fails closed"
+run_case wrong_request_head 1 "pending result expected-head mismatch fails closed"
 run_case timeout 1 "pending request polling budget exhaustion fails closed"
 run_case options_mismatch 1 "existing request with different merge options fails closed"
 run_case malformed_uuid 1 "malformed conflict UUID fails closed"
