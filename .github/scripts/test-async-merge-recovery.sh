@@ -74,7 +74,7 @@ if [[ "$url" == */pulls/7/merge-async/* ]]; then
       ;;
   esac
 elif [[ "$url" == */pulls/7 ]]; then
-  if [[ "$scenario" == "stale_pr" ]]; then
+  if [[ "$scenario" == "stale_pr" || "$scenario" == "enqueued_wrong_head" ]]; then
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$BASE\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$OLD_HEAD\"}}"
   elif [[ "$scenario" == "stale_base" ]]; then
     body="{\"state\":\"open\",\"merged\":false,\"draft\":false,\"base\":{\"ref\":\"main\",\"sha\":\"$OLD_HEAD\"},\"head\":{\"repo\":{\"full_name\":\"owner/repo\"},\"sha\":\"$HEAD\"}}"
@@ -116,7 +116,7 @@ elif [[ "$url" == */pulls/7/merge-async ]]; then
       status=409
       body="{\"status\":\"pending\",\"details\":{\"uuid\":\"$UUID1\",\"merge_method\":\"squash\",\"merge_action\":\"default\"}}"
       ;;
-    enqueued)
+    enqueued|enqueued_wrong_head)
       status=200
       body='{"status":"enqueued","details":{"message":"already queued"}}'
       ;;
@@ -169,5 +169,6 @@ run_case stale_base 1 "changed PR base fails before submission"
 run_case api_error 1 "non-409 API error fails closed"
 run_case transport_error 90 "transport failure fails closed"
 run_case enqueued 0 "merge-queue enqueue is not reported as merged"
+run_case enqueued_wrong_head 1 "queue state for a different PR head fails closed"
 
 echo "All async merge recovery tests passed."
