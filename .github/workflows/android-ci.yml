@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -17,6 +17,7 @@ concurrency:
 jobs:
   generate-wrapper:
     name: Generate Gradle Wrapper bootstrap files
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feat/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
