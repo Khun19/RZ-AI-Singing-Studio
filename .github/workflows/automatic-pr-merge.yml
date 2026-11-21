@@ -14,15 +14,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  recovery-script-validation:
-    name: Validate async merge recovery logic
+  validate-proposed-scripts:
+    name: Validate proposed PR recovery scripts (read-only)
     runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Syntax-check and simulate async merge recovery
         run: |
@@ -32,7 +33,7 @@ jobs:
 
   enable-github-auto-merge:
     name: Request ruleset-gated asynchronous squash merge
-    needs: [recovery-script-validation]
+    needs: [validate-proposed-scripts]
     timeout-minutes: 10
     permissions:
       contents: write
