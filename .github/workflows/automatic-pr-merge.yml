@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   enable-github-auto-merge:
-    name: Enable ruleset-gated automatic squash merge
+    name: Request ruleset-gated asynchronous squash merge
     if: >-
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -44,7 +44,7 @@ jobs:
           ' <<<"$pr" >/dev/null
           echo "PR identity and exact event SHAs verified."
 
-      - name: Queue native GitHub auto-merge
+      - name: Request asynchronous squash merge
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -52,6 +52,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$EXPECTED_HEAD_SHA"
-          echo "GitHub native auto-merge enabled. GitHub will merge only after all active ruleset requirements pass."
-
+          response="$(gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge-async" \
+            -f merge_method=squash \
+            -f merge_action=default \
+            -f sha="$EXPECTED_HEAD_SHA")"
+          status="$(jq -r '.status // empty' <<<"$response")"
+          case "$status" in
+            pending|enqueued|merged)
+              echo "Asynchronous squash merge accepted: $status"
+              ;;
+            *)
+              echo "Unexpected async merge response; failing closed." >&2
+              jq . <<<"$response" >&2
+              exit 1
+              ;;
+          esac
