@@ -6,6 +6,7 @@ S=importlib.util.spec_from_file_location("checker",D/"trusted-async-merge-contra
 SAFE=r'''#!/bin/bash
 EXPECTED_HEAD_SHA="${EXPECTED_HEAD_SHA:?}"
 [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+[[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
 validate_current_pr(){ jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" '.state == "open" and .merged == false and .base.ref == "main" and .head.repo.full_name == $repo and .head.sha == $head and .base.sha == $base'; }
 verify_actual_merge(){ jq -e --arg head "$EXPECTED_HEAD_SHA" '.state == "closed" and .merged == true and .head.sha == $head'; jq -e --arg sha "$expected_merge_sha" '.merge_commit_sha == $sha'; }
 reject(){ jq -e '.details.bypass_rules == true'; }
