@@ -4,7 +4,7 @@ from pathlib import Path
 R={
 "payload bypass false":r"\{\s*merge_method\s*:\s*['\"]squash['\"].*?merge_action\s*:\s*['\"]default['\"].*?bypass_rules\s*:\s*false.*?sha\s*:\s*\$sha\s*\}",
 "head SHA format":r"EXPECTED_HEAD_SHA.*?\[\[\s*\"\$EXPECTED_HEAD_SHA\"\s*=~\s*\^\[0-9a-f\]\{40\}\$",
-"base SHA format":r"EXPECTED_BASE_SHA.*?\\[\\[\\s*\\"\\$EXPECTED_BASE_SHA\\"\\s*=~\\s*\\^\\[0-9a-f\\]\\{40\\}\\$",
+"base SHA format":r"EXPECTED_BASE_SHA.*?\[\[\s*\"\$EXPECTED_BASE_SHA\"\s*=~\s*\^\[0-9a-f\]\{40\}\$",
 "exact PR head and base":r"\.head\.sha\s*==\s*\$head.*?\.base\.sha\s*==\s*\$base",
 "open and unmerged":r"\.state\s*==\s*['\"]open['\"].*?\.merged\s*==\s*false",
 "main and same repo":r"\.base\.ref\s*==\s*['\"]main['\"].*?\.head\.repo\.full_name\s*==\s*\$repo",
