@@ -1,0 +1,30 @@
+name: Trusted Async Merge Contract
+on:
+  pull_request_target:
+    branches: [main]
+    paths:
+      - '.github/scripts/request-async-merge.sh'
+      - '.github/scripts/trusted-async-merge-contract.sh'
+      - '.github/workflows/async-merge.yml'
+      - '.github/workflows/trusted-async-merge-contract.yml'
+permissions:
+  contents: read
+jobs:
+  contract-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted-base
+          persist-credentials: false
+      - name: Checkout proposed head as data
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: proposed
+          persist-credentials: false
+      - name: Audit proposed script statically with trusted base checker
+        run: bash trusted-base/.github/scripts/trusted-async-merge-contract.sh proposed/.github/scripts/request-async-merge.sh
