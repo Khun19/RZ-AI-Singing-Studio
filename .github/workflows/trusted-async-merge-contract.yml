@@ -1,0 +1,62 @@
+name: Trusted Async Merge Contract
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/scripts/request-async-merge.sh'
+      - '.github/scripts/trusted-async-merge-contract.sh'
+      - '.github/scripts/trusted-async-merge-contract.py'
+      - '.github/scripts/test-trusted-async-merge-contract.py'
+      - '.github/workflows/trusted-async-merge-contract.yml'
+  pull_request_target:
+    branches: [main]
+    paths:
+      - '.github/scripts/request-async-merge.sh'
+      - '.github/scripts/trusted-async-merge-contract.sh'
+      - '.github/scripts/trusted-async-merge-contract.py'
+      - '.github/scripts/test-trusted-async-merge-contract.py'
+      - '.github/workflows/async-merge.yml'
+      - '.github/workflows/trusted-async-merge-contract.yml'
+permissions:
+  contents: read
+jobs:
+  bootstrap-regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout proposed branch (read-only smoke test)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Checkout fixed candidate fixture
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: d6b01ae75353f978dc3df4d61ff7ea0018be57b0
+          path: candidate
+          persist-credentials: false
+      - name: Run checker regression tests (non-authoritative)
+        run: python3 .github/scripts/test-trusted-async-merge-contract.py
+      - name: Run checker against pinned async merge candidate
+        run: python3 .github/scripts/trusted-async-merge-contract.py candidate/.github/scripts/request-async-merge.sh
+  contract-audit:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted base
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted-base
+          persist-credentials: false
+      - name: Checkout proposed head as data
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: proposed
+          persist-credentials: false
+      - name: Test trusted checker regression fixtures
+        run: python3 trusted-base/.github/scripts/test-trusted-async-merge-contract.py
+      - name: Audit proposed script with trusted base checker
+        run: python3 trusted-base/.github/scripts/trusted-async-merge-contract.py proposed/.github/scripts/request-async-merge.sh
