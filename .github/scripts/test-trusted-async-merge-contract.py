@@ -29,7 +29,7 @@ payload="$(jq -cn --arg sha "$EXPECTED_HEAD_SHA" '{merge_method:"squash",merge_a
 class T(unittest.TestCase):
  def check(self,x):
   with tempfile.TemporaryDirectory() as d:
-   p=Path(d)/"candidate.sh";p.write_text(x);return C.main([str(C.__file__),str(p)])
+   p=Path(d)/"candidate.sh";p.write_text(x);return C.main([str(p)])
  def test_valid(self):self.assertEqual(self.check(SAFE),0)
  def test_comments_cannot_pass(self):self.assertNotEqual(self.check("\n".join("# "+x for x in SAFE.splitlines())),0)
  def test_bypass_false_missing(self):self.assertNotEqual(self.check(SAFE.replace(".details.bypass_rules == false","unknown")),0)
