@@ -25,6 +25,8 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$EXPECTED_HEAD_SHA"
           jq -e '.state == "open" and .base.ref == "main" and .draft == false and .head.repo.full_name == $repo and .head.sha == $head and .base.sha == $base'
 """
 class Tests(unittest.TestCase):
