@@ -1,0 +1,47 @@
+name: Trusted Base Merge Policy Harness
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  policy-audit:
+    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted base only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Install pinned YAML parser
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
+      - name: Verify event and fetch candidate workflow as data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" '
+            .state == "open" and .merged == false and .draft == false
+            and .base.ref == "main"
+            and .head.repo.full_name == $repo
+            and .head.sha == $head
+            and .base.sha == $base
+          ' <<<"$pr" >/dev/null
+          gh api --header "Accept: application/vnd.github.raw+json" "repos/$GITHUB_REPOSITORY/contents/.github/workflows/automatic-pr-merge.yml?ref=$EXPECTED_HEAD_SHA" > candidate-workflow.yml
+          test -s candidate-workflow.yml
+          python3 .github/scripts/trusted-base-policy-audit.py candidate-workflow.yml
