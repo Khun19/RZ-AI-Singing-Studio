@@ -66,5 +66,41 @@ class PolicyMutationTests(unittest.TestCase):
     def test_draft_restriction_removed_rejected(self):
         self.assertNotEqual(self.run_checker(SAFE.replace(".draft == false", "true")).returncode, 0)
 
+    def test_nested_permissions_rejected(self):
+        mutation = SAFE.replace("  check:\n", "  check:\n    steps: []\n    permissions:\n      contents: write\n", 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_yaml_anchor_rejected(self):
+        mutation = SAFE.replace("permissions:\n", "permissions: &policy_permissions\n", 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_yaml_alias_rejected(self):
+        mutation = SAFE + "\nextra_permissions: *policy_permissions\n"
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_yaml_merge_key_rejected(self):
+        mutation = SAFE + "\npermissions_override:\n  <<: *policy_permissions\n"
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_eval_merge_command_rejected(self):
+        mutation = SAFE.replace("jq -e", 'eval "gh pr merge 12 --auto"\\n          jq -e', 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_gh_variable_alias_rejected(self):
+        mutation = SAFE.replace("jq -e", 'GH=gh; "$GH" pr merge 12 --auto\\n          jq -e', 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_shell_command_substitution_rejected(self):
+        mutation = SAFE.replace("jq -e", 'GH=$(printf gh); "$GH" pr merge 12 --auto\\n          jq -e', 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_encoded_shell_payload_rejected(self):
+        mutation = SAFE.replace("jq -e", "printf Z2ggcHIgbWVyZ2U= | base64 -d | sh\\n          jq -e", 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
+    def test_bash_c_merge_command_rejected(self):
+        mutation = SAFE.replace("jq -e", 'bash -c "gh pr merge 12 --auto"\\n          jq -e', 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
