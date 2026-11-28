@@ -1,0 +1,26 @@
+name: Trusted Policy Mutation Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/scripts/trusted-base-policy-audit.py"
+      - ".github/scripts/tests/**"
+      - ".github/workflows/trusted-base-policy-harness.yml"
+      - ".github/workflows/trusted-policy-mutation-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mutation-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR code in unprivileged context
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned YAML parser
+        run: python3 -m pip install --disable-pip-version-check "PyYAML==6.0.2"
+      - name: Run independent mutation regression suite
+        run: python3 -m unittest discover -s .github/scripts/tests -p "test_*.py" -v
