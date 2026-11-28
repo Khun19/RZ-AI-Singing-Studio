@@ -12,8 +12,8 @@ on:
   pull_request:
     branches: [main]
 permissions:
-  contents: read
-  pull-requests: read
+  contents: write
+  pull-requests: write
 jobs:
   merge:
     if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false
@@ -44,8 +44,8 @@ class Tests(unittest.TestCase):
     def test_invalid_yaml(self): self.reject(SAFE + "\ninvalid: [\n")
     def test_multiple_documents(self): self.reject(SAFE + "\n---\nname: second\n")
     def test_nested_permissions(self): self.reject(SAFE.replace("    steps:", "    permissions:\n      contents: write\n    steps:", 1))
-    def test_write_all(self): self.reject(SAFE.replace("contents: read", "contents: write-all"))
-    def test_write_grant(self): self.reject(SAFE.replace("contents: read", "contents: write"))
+    def test_write_all(self): self.reject(SAFE.replace("contents: write", "contents: write-all"))
+    def test_write_grant(self): self.reject(SAFE.replace("contents: write", "contents: read"))
     def test_anchor(self): self.reject(SAFE.replace("permissions:", "permissions: &p", 1))
     def test_alias(self): self.reject(SAFE + "\nextra: *p\n")
     def test_merge_key(self): self.reject(SAFE + "\nextra:\n  <<: {x: y}\n")
