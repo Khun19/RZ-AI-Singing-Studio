@@ -65,5 +65,25 @@ class Tests(unittest.TestCase):
     def test_variable_alias(self): self.reject(SAFE.replace("set -euo pipefail", "GH=gh; $GH pr merge 2"))
     def test_quoted_fragment(self): self.reject(SAFE.replace("set -euo pipefail", "g''h pr merge 2"))
     def test_shell_continuation(self): self.reject(SAFE.replace("set -euo pipefail", "gh \\\n pr merge 2"))
+    def test_actual_automatic_merge_workflow_passes(self):
+        candidate = ROOT / ".github/workflows/automatic-pr-merge.yml"
+        result = self.check(candidate.read_text(encoding="utf-8"))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_harness_checks_out_trusted_base_only(self):
+        import yaml
+        harness_path = ROOT / ".github/workflows/trusted-base-policy-harness.yml"
+        harness = yaml.load(harness_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        self.assertIn("pull_request_target", harness["on"])
+        self.assertEqual(harness["permissions"], {"contents": "read", "pull-requests": "read"})
+        jobs = harness["jobs"]
+        self.assertEqual(len(jobs), 1)
+        steps = next(iter(jobs.values()))["steps"]
+        checkout = next(step for step in steps if step.get("uses", "").startswith("actions/checkout@"))
+        self.assertEqual(checkout["with"]["ref"], "github.event.pull_request.base.sha")
+        self.assertEqual(checkout["with"]["persist-credentials"], "false")
+        self.assertTrue(any("candidate-workflow.yml" in step.get("run", "") for step in steps))
+        self.assertTrue(any("trusted-base-policy-audit.py candidate-workflow.yml" in step.get("run", "") for step in steps))
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
