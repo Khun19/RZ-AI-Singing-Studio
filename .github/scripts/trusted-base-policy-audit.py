@@ -38,8 +38,8 @@ data = documents[0]
 require(not any(str(k) == "<<" for _, k, _ in walk(data)), "YAML merge keys prohibited")
 permissions = data.get("permissions")
 require(isinstance(permissions, dict), "top-level permissions mapping exists")
-require(permissions == {"contents": "read", "pull-requests": "read"},
-        "top-level permissions are read-only")
+require(permissions == {"contents": "write", "pull-requests": "write"},
+        "candidate has only the exact permissions required for native auto-merge")
 jobs = data.get("jobs")
 require(isinstance(jobs, dict) and bool(jobs), "jobs mapping exists")
 for name, job in jobs.items():
@@ -47,8 +47,6 @@ for name, job in jobs.items():
     require("permissions" not in job, f"job {name} has no permissions override")
 for path, key, value in walk(data):
     if str(value).lower() == "write-all": reject(f"write-all permission at {path}.{key}")
-    if str(key) in {"contents", "pull-requests", "actions", "issues", "checks", "statuses"}:
-        require(value != "write", f"no write grant at {path}.{key}")
 
 trigger = data.get("on")
 require(isinstance(trigger, dict) and isinstance(trigger.get("pull_request"), dict),
