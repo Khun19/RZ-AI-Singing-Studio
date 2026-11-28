@@ -41,7 +41,7 @@ require(isinstance(permissions, dict), "top-level permissions mapping exists")
 require(permissions == {"contents": "write", "pull-requests": "write"},
         "candidate has only the exact permissions required for native auto-merge")
 jobs = data.get("jobs")
-require(isinstance(jobs, dict) and bool(jobs), "jobs mapping exists")
+require(isinstance(jobs, dict) and len(jobs) == 1, "exactly one job is permitted")
 for name, job in jobs.items():
     require(isinstance(job, dict), f"job {name} is a mapping")
     require("permissions" not in job, f"job {name} has no permissions override")
@@ -49,17 +49,18 @@ for path, key, value in walk(data):
     if str(value).lower() == "write-all": reject(f"write-all permission at {path}.{key}")
 
 trigger = data.get("on")
-require(isinstance(trigger, dict) and isinstance(trigger.get("pull_request"), dict),
-        "pull_request trigger exists")
+require(isinstance(trigger, dict) and set(trigger.keys()) == {"pull_request"},
+        "only pull_request trigger is permitted")
+require(isinstance(trigger.get("pull_request"), dict), "pull_request trigger exists")
 branches = trigger["pull_request"].get("branches", [])
 require(isinstance(branches, list) and "main" in branches, "trigger targets main")
 scripts = []
 for name, job in jobs.items():
-    guard = str(job.get("if", ""))
-    require("github.event.pull_request.base.ref == 'main'" in guard, f"{name}: main guard")
-    require("github.event.pull_request.head.repo.full_name == github.repository" in guard,
-            f"{name}: same-repository guard")
-    require("github.event.pull_request.draft == false" in guard, f"{name}: draft guard")
+    guard = " ".join(str(job.get("if", "")).split())
+    expected_guard = ("github.event.pull_request.base.ref == 'main' && "
+                      "github.event.pull_request.head.repo.full_name == github.repository && "
+                      "github.event.pull_request.draft == false")
+    require(guard == expected_guard, f"{name}: exact fail-closed PR guard")
     steps = job.get("steps", [])
     require(isinstance(steps, list) and bool(steps), f"{name}: steps exist")
     for index, step in enumerate(steps):
