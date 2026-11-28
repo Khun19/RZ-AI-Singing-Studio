@@ -73,6 +73,7 @@ for name, job in jobs.items():
                 if key in env:
                     require("github.event.pull_request." in str(env[key]), f"{key}: event-bound")
 combined = "\n".join(scripts)
+shell_flat = re.sub(r"['\"]", "", combined)
 require("EXPECTED_HEAD_SHA" in combined and "EXPECTED_BASE_SHA" in combined,
         "expected head/base SHA values used")
 require(bool(re.search(r"\[\[.*EXPECTED_HEAD_SHA.*\[0-9a-f\].*40", combined, re.S)),
@@ -86,13 +87,17 @@ for token in (".state == \"open\"", ".base.ref == \"main\"", ".draft == false",
 patterns = {
  "dynamic evaluator": r"(?i)\b(eval|exec)\b",
  "shell -c": r"(?i)\b(?:bash|sh|dash|zsh)\s+-c\b",
- "command substitution": r"\$\(|\$\{|\x60",
+ "unapproved command substitution": r"\$\((?!\s*gh\s+api\b)|\$\{|\x60",
  "base64-to-shell pipe": r"(?is)(?:base64|openssl\s+enc)[^|]*\|\s*(?:ba)?sh\b",
- "merge CLI": r"(?i)\bgh\s+pr\s+merge\b",
  "merge API": r"(?i)\bgh\s+api\b[^\n]*(?:/merge|merge\?)",
  "shell continuation": r"(?m)\\\s*$",
  "indirect gh alias": r"(?im)^\s*[A-Za-z_]\w*\s*=\s*['\"]?gh['\"]?\s*(?:;|$)|\$\w+\s+(?:pr|api)\b",
 }
 for label, pattern in patterns.items():
-    require(not re.search(pattern, combined), "no " + label)
+    require(not re.search(pattern, shell_flat), "no " + label)
+merge_lines = [line.strip() for line in shell_flat.splitlines()
+               if re.search(r"(?i)\bgh\s+pr\s+merge\b", line)]
+safe_merge = "gh pr merge $PR_NUMBER --repo $GITHUB_REPOSITORY --auto --squash --match-head-commit $EXPECTED_HEAD_SHA"
+require(merge_lines == [safe_merge],
+        "only exact-head native squash auto-merge command is permitted")
 print("RESULT: YAML-aware policy validation PASS")
