@@ -16,13 +16,22 @@ concurrency:
 
 jobs:
   validate-pr-identity:
-    name: Read-only PR identity validation
+    name: Read-only PR identity and policy validation
     if: >-
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout candidate source for read-only inspection
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Run read-only policy regression script
+        run: python3 .github/scripts/test-merge-workflow-policy.py
+
       - name: Verify PR identity and event SHAs
         env:
           GH_TOKEN: ${{ github.token }}
