@@ -32,7 +32,7 @@ class PolicyMutationTests(unittest.TestCase):
             return subprocess.run(["python3", str(CHECKER), str(f)],capture_output=True,text=True)
 
     def test_safe_baseline_passes(self):
-        self.assertEqual(self.run_checker(SAFE).returncode, 0)
+        result = self.run_checker(SAFE)\n        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
     def test_write_all_rejected(self):
         self.assertNotEqual(self.run_checker(SAFE.replace("permissions:\n", "permissions: write-all\n",1)).returncode,0)
     def test_job_permissions_override_rejected(self):
