@@ -7,6 +7,7 @@ import sys
 raw = Path(sys.argv[1]).read_text(encoding="utf-8")
 lines = raw.splitlines()
 normalized = raw.replace("\\\n", " ")
+shell_flat = re.sub(r"[\'\"]", "", normalized)
 
 yaml_features = {
     "no YAML anchors or aliases": not re.search(r"(?m)(?:^|[\s:[,{])[*&][A-Za-z0-9_-]+\b", raw),
