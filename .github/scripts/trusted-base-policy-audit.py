@@ -1,66 +1,98 @@
 #!/usr/bin/env python3
-"""Conservative lexical policy screen; not a YAML or shell semantic verifier."""
+"""YAML-aware fail-closed policy checker."""
 from pathlib import Path
 import re
 import sys
+try:
+    import yaml
+    from yaml.tokens import AliasToken, AnchorToken
+except ImportError as exc:
+    print(f"FAIL: PyYAML unavailable: {exc}")
+    sys.exit(2)
 
-raw = Path(sys.argv[1]).read_text(encoding="utf-8")
-lines = raw.splitlines()
-normalized = raw.replace("\\\n", " ")
-shell_flat = re.sub(r"[\'\"]", "", normalized)
+def reject(message):
+    print("FAIL: " + message)
+    sys.exit(1)
+def require(ok, message):
+    if not ok: reject(message)
+    print("PASS: " + message)
+def walk(value, path="$"):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield path, key, child
+            yield from walk(child, path + "." + str(key))
+    elif isinstance(value, list):
+        for i, child in enumerate(value):
+            yield from walk(child, path + f"[{i}]")
 
-yaml_features = {
-    "no YAML anchors or aliases": not re.search(r"(?m)(?:^|[\s:[,{])[*&][A-Za-z0-9_-]+\b", raw),
-    "no YAML merge keys": not re.search(r"(?m)^\s*<<\s*:", raw),
-    "no nested permission declarations": not re.search(r"(?m)^\s{1,}permissions\s*:", raw),
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+try:
+    tokens = list(yaml.scan(source, Loader=yaml.BaseLoader))
+    documents = list(yaml.load_all(source, Loader=yaml.BaseLoader))
+except yaml.YAMLError as exc:
+    reject("YAML parse error: " + str(exc))
+require(len(documents) == 1 and isinstance(documents[0], dict), "single YAML mapping document")
+require(not any(isinstance(t, (AnchorToken, AliasToken)) for t in tokens),
+        "anchors and aliases prohibited")
+data = documents[0]
+require(not any(str(k) == "<<" for _, k, _ in walk(data)), "YAML merge keys prohibited")
+permissions = data.get("permissions")
+require(isinstance(permissions, dict), "top-level permissions mapping exists")
+require(permissions == {"contents": "read", "pull-requests": "read"},
+        "top-level permissions are read-only")
+jobs = data.get("jobs")
+require(isinstance(jobs, dict) and bool(jobs), "jobs mapping exists")
+for name, job in jobs.items():
+    require(isinstance(job, dict), f"job {name} is a mapping")
+    require("permissions" not in job, f"job {name} has no permissions override")
+for path, key, value in walk(data):
+    if str(value).lower() == "write-all": reject(f"write-all permission at {path}.{key}")
+    if str(key) in {"contents", "pull-requests", "actions", "issues", "checks", "statuses"}:
+        require(value != "write", f"no write grant at {path}.{key}")
+
+trigger = data.get("on")
+require(isinstance(trigger, dict) and isinstance(trigger.get("pull_request"), dict),
+        "pull_request trigger exists")
+branches = trigger["pull_request"].get("branches", [])
+require(isinstance(branches, list) and "main" in branches, "trigger targets main")
+scripts = []
+for name, job in jobs.items():
+    guard = str(job.get("if", ""))
+    require("github.event.pull_request.base.ref == 'main'" in guard, f"{name}: main guard")
+    require("github.event.pull_request.head.repo.full_name == github.repository" in guard,
+            f"{name}: same-repository guard")
+    require("github.event.pull_request.draft == false" in guard, f"{name}: draft guard")
+    steps = job.get("steps", [])
+    require(isinstance(steps, list) and bool(steps), f"{name}: steps exist")
+    for index, step in enumerate(steps):
+        require(isinstance(step, dict), f"{name}: step {index} is mapping")
+        if "run" in step: scripts.append(str(step["run"]))
+        env = step.get("env", {})
+        if isinstance(env, dict):
+            for key in ("EXPECTED_HEAD_SHA", "EXPECTED_BASE_SHA"):
+                if key in env:
+                    require("github.event.pull_request." in str(env[key]), f"{key}: event-bound")
+combined = "\n".join(scripts)
+require("EXPECTED_HEAD_SHA" in combined and "EXPECTED_BASE_SHA" in combined,
+        "expected head/base SHA values used")
+require(bool(re.search(r"\[\[.*EXPECTED_HEAD_SHA.*\[0-9a-f\].*40", combined, re.S)),
+        "head SHA format validated")
+require(bool(re.search(r"\[\[.*EXPECTED_BASE_SHA.*\[0-9a-f\].*40", combined, re.S)),
+        "base SHA format validated")
+for token in (".state == \"open\"", ".base.ref == \"main\"", ".draft == false",
+              ".head.repo.full_name == $repo", ".head.sha == $head", ".base.sha == $base"):
+    require(token in combined, "API revalidation contains " + token)
+
+patterns = {
+ "dynamic evaluator": r"(?i)\b(eval|exec)\b",
+ "shell -c": r"(?i)\b(?:bash|sh|dash|zsh)\s+-c\b",
+ "command substitution": r"\$\(|\$\{|\x60",
+ "base64-to-shell pipe": r"(?is)(?:base64|openssl\s+enc)[^|]*\|\s*(?:ba)?sh\b",
+ "merge CLI": r"(?i)\bgh\s+pr\s+merge\b",
+ "merge API": r"(?i)\bgh\s+api\b[^\n]*(?:/merge|merge\?)",
+ "shell continuation": r"(?m)\\\s*$",
+ "indirect gh alias": r"(?im)^\s*[A-Za-z_]\w*\s*=\s*['\"]?gh['\"]?\s*(?:;|$)|\$\w+\s+(?:pr|api)\b",
 }
-shell_features = {
-    "no dynamic shell evaluators": not re.search(
-        r"(?i)\b(eval|exec)\s+|\b(?:bash|sh|dash|zsh)\s+-c\b|\bcommand\s+(?:gh|\$)", normalized
-    ),
-    "no shell command substitution": not re.search(r"\$\(|\$\{|\x60", normalized),
-    "no command-name aliases for gh": not re.search(
-        r"(?im)^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*['\"]?gh['\"]?\s*(?:;|$)", normalized
-    ) and not re.search(r"(?i)\$[A-Za-z_][A-Za-z0-9_]*\s+(?:pr|api)\b", normalized),
-    "no encoded payload piped to a shell": not re.search(
-        r"(?is)(?:base64|openssl\s+enc|printf|echo)[^\n|]*\|\s*(?:ba)?sh\b", normalized
-    ),
-    "no merge CLI invocation": not re.search(r"(?i)\bgh\s+pr\s+merge\b", shell_flat),
-    "no merge API invocation": not re.search(r"(?i)\bgh\s+api\b[^\n]*(?:/merge|merge\?)", shell_flat),
-    "no ambiguous shell command continuation": not re.search(r"(?m)\\\s*$", raw),
-}
-checks = {
-    "top-level read-only permissions": any(
-        lines[i:i + 3] == ["permissions:", "  contents: read", "  pull-requests: read"]
-        for i in range(max(0, len(lines) - 2))
-    ),
-    "no write-all permission declaration": not re.search(r"(?im)^\s*permissions:\s*write-all\s*$", raw),
-    "no explicit token write grants": not re.search(
-        r"(?im)^\s*(contents|pull-requests|actions|issues|checks|statuses):\s*write\s*$", raw
-    ),
-    "expected head/base env validation": all(
-        token in raw for token in ("EXPECTED_HEAD_SHA", "EXPECTED_BASE_SHA", "^[0-9a-f]{40}$")
-    ),
-    "identity and SHA API verification": all(
-        token in raw for token in (".head.repo.full_name == $repo", ".head.sha == $head", ".base.sha == $base")
-    ),
-    "main branch restriction at job guard": bool(
-        re.search(r"(?im)^\s*if:.*\.base\.ref\s*==\s*['\"]main['\"]", raw)
-    ),
-    "main branch restriction in API revalidation": bool(
-        re.search(r"(?s)\.state\s*==\s*['\"]open['\"].*?\.base\.ref\s*==\s*['\"]main['\"]", raw)
-    ),
-    "draft exclusion at job guard": bool(
-        re.search(r"(?im)^\s*if:.*\.draft\s*==\s*false", raw)
-    ),
-    "draft exclusion in API revalidation": bool(
-        re.search(r"(?s)\.state\s*==\s*['\"]open['\"].*?\.draft\s*==\s*false", raw)
-    ),
-}
-checks.update(yaml_features)
-checks.update(shell_features)
-for label, ok in checks.items():
-    print(("PASS" if ok else "FAIL") + ": " + label)
-failed = [label for label, ok in checks.items() if not ok]
-print(f"RESULT: {len(checks) - len(failed)}/{len(checks)}")
-sys.exit(1 if failed else 0)
+for label, pattern in patterns.items():
+    require(not re.search(pattern, combined), "no " + label)
+print("RESULT: YAML-aware policy validation PASS")
