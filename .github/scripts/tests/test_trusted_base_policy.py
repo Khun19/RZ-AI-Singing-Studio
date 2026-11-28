@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CHECKER = ROOT / ".github/scripts/trusted-base-policy-audit.py"
 SAFE = """name: Safe candidate
 permissions:
