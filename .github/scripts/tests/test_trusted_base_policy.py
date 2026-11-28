@@ -66,17 +66,18 @@ class Tests(unittest.TestCase):
     def test_quoted_fragment(self): self.reject(SAFE.replace("set -euo pipefail", "g''h pr merge 2"))
     def test_shell_continuation(self): self.reject(SAFE.replace("set -euo pipefail", "gh \\\n pr merge 2"))
     def test_job_write_all_permissions_rejected(self):
-        mutated = SAFE.replace("    steps:", "    permissions: write-all\\n    steps:", 1)
+        mutated = SAFE.replace("    steps:", "    permissions: write-all\n    steps:", 1)
         self.reject(mutated)
     def test_extra_trigger_rejected(self):
-        self.reject(SAFE.replace("  pull_request:\\n", "  workflow_dispatch: {}\\n  pull_request:\\n", 1))
+        self.reject(SAFE.replace("on:\n", "on:\n  workflow_dispatch: {}\n", 1))
     def test_guard_or_true_bypass_rejected(self):
         self.reject(SAFE.replace("github.event.pull_request.draft == false",
                                  "github.event.pull_request.draft == false || true", 1))
     def test_additional_job_rejected(self):
-        self.reject(SAFE + "\\n  extra-job:\\n    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false\\n    steps:\\n      - run: echo unexpected\\n")
+        extra = "\n  extra-job:\n    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false\n    steps:\n      - run: echo unexpected\n"
+        self.reject(SAFE + extra)
     def test_backslash_continued_merge_rejected(self):
-        mutated = SAFE.replace("gh pr merge", "gh \\\\n            pr merge")
+        mutated = SAFE.replace("gh pr merge", "gh " + chr(92) + "\n            pr merge")
         self.reject(mutated)
 
     def test_actual_automatic_merge_workflow_passes(self):
