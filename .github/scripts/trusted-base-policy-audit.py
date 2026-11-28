@@ -17,7 +17,7 @@ shell_features = {
     "no dynamic shell evaluators": not re.search(
         r"(?i)\b(eval|exec)\s+|\b(?:bash|sh|dash|zsh)\s+-c\b|\bcommand\s+(?:gh|\$)", normalized
     ),
-    "no shell command substitution": not re.search(r"\$\(|\$\{|\\x60", normalized),
+    "no shell command substitution": not re.search(r"\$\(|\$\{|\x60", normalized),
     "no command-name aliases for gh": not re.search(
         r"(?im)^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*['\"]?gh['\"]?\s*(?:;|$)", normalized
     ) and not re.search(r"(?i)\$[A-Za-z_][A-Za-z0-9_]*\s+(?:pr|api)\b", normalized),
