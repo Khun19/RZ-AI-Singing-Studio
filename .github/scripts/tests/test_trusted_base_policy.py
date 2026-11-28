@@ -102,5 +102,9 @@ class PolicyMutationTests(unittest.TestCase):
         mutation = SAFE.replace("jq -e", 'bash -c "gh pr merge 12 --auto"\\n          jq -e', 1)
         self.assertNotEqual(self.run_checker(mutation).returncode, 0)
 
+    def test_quoted_command_fragment_merge_rejected(self):
+        mutation = SAFE.replace("jq -e", "g''h pr merge 12 --auto\n          jq -e", 1)
+        self.assertNotEqual(self.run_checker(mutation).returncode, 0)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
