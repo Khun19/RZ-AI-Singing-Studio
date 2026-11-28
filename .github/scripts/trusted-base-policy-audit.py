@@ -6,7 +6,6 @@ import sys
 
 raw = Path(sys.argv[1]).read_text(encoding="utf-8")
 lines = raw.splitlines()
-# Join shell continuations so split commands cannot evade simple command checks.
 normalized = raw.replace("\\\n", " ")
 checks = {
     "top-level read-only permissions": any(
@@ -27,8 +26,18 @@ checks = {
     "identity and SHA API verification": all(
         token in raw for token in (".head.repo.full_name == $repo", ".head.sha == $head", ".base.sha == $base")
     ),
-    "main branch restriction": '.base.ref == "main"' in raw,
-    "draft exclusion": ".draft == false" in raw,
+    "main branch restriction at job guard": bool(
+        re.search(r"(?im)^\s*if:.*\.base\.ref\s*==\s*['\"]main['\"]", raw)
+    ),
+    "main branch restriction in API revalidation": bool(
+        re.search(r"(?s)\.state\s*==\s*['\"]open['\"].*?\.base\.ref\s*==\s*['\"]main['\"]", raw)
+    ),
+    "draft exclusion at job guard": bool(
+        re.search(r"(?im)^\s*if:.*\.draft\s*==\s*false", raw)
+    ),
+    "draft exclusion in API revalidation": bool(
+        re.search(r"(?s)\.state\s*==\s*['\"]open['\"].*?\.draft\s*==\s*false", raw)
+    ),
 }
 for label, ok in checks.items():
     print(("PASS" if ok else "FAIL") + ": " + label)
