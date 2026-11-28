@@ -21,7 +21,7 @@ jobs:
         run: |
           [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          jq -e '.head.repo.full_name == $repo and .head.sha == $head and .base.sha == $base and .base.ref == "main" and .draft == false'
+          jq -e '.state == "open" and .head.repo.full_name == $repo and .head.sha == $head and .base.sha == $base and .base.ref == "main" and .draft == false'
 """
 
 class PolicyMutationTests(unittest.TestCase):
