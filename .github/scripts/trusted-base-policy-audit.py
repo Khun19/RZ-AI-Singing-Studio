@@ -7,20 +7,20 @@ import sys
 raw = Path(sys.argv[1]).read_text(encoding="utf-8")
 lines = raw.splitlines()
 # Join shell continuations so split commands cannot evade simple command checks.
-normalized = re.sub(r"\\\\\\s*\\n\\s*", " ", raw)
+normalized = raw.replace("\\\n", " ")
 checks = {
     "top-level read-only permissions": any(
         lines[i:i + 3] == ["permissions:", "  contents: read", "  pull-requests: read"]
         for i in range(max(0, len(lines) - 2))
     ),
-    "no write-all permission declaration": not re.search(r"(?im)^\\s*permissions:\\s*write-all\\s*$", raw),
-    "no job-level permissions overrides": not re.search(r"(?m)^\\s{4,}permissions:\\s*$", raw),
+    "no write-all permission declaration": not re.search(r"(?im)^\s*permissions:\s*write-all\s*$", raw),
+    "no job-level permissions overrides": not re.search(r"(?m)^\s{4,}permissions:\s*$", raw),
     "no explicit token write grants": not re.search(
-        r"(?im)^\\s*(contents|pull-requests|actions|issues|checks|statuses):\\s*write\\s*$", raw
+        r"(?im)^\s*(contents|pull-requests|actions|issues|checks|statuses):\s*write\s*$", raw
     ),
-    "no merge CLI invocation": not re.search(r"(?i)\\bgh\\s+pr\\s+merge\\b", normalized),
-    "no merge API invocation": not re.search(r"(?i)\\bgh\\s+api\\b[^\\n]*(?:/merge|merge\\?)", normalized),
-    "no ambiguous shell command continuation": not re.search(r"(?m)\\\\\\s*$", raw),
+    "no merge CLI invocation": not re.search(r"(?i)\bgh\s+pr\s+merge\b", normalized),
+    "no merge API invocation": not re.search(r"(?i)\bgh\s+api\b[^\n]*(?:/merge|merge\?)", normalized),
+    "no ambiguous shell command continuation": not re.search(r"(?m)\\\s*$", raw),
     "expected head/base env validation": all(
         token in raw for token in ("EXPECTED_HEAD_SHA", "EXPECTED_BASE_SHA", "^[0-9a-f]{40}$")
     ),
