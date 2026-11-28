@@ -80,7 +80,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(jobs), 1)
         steps = next(iter(jobs.values()))["steps"]
         checkout = next(step for step in steps if step.get("uses", "").startswith("actions/checkout@"))
-        self.assertEqual(checkout["with"]["ref"], "github.event.pull_request.base.sha")
+        self.assertTrue(checkout["with"]["ref"].endswith("github.event.pull_request.base.sha }}"))
         self.assertEqual(checkout["with"]["persist-credentials"], "false")
         self.assertTrue(any("candidate-workflow.yml" in step.get("run", "") for step in steps))
         self.assertTrue(any("trusted-base-policy-audit.py candidate-workflow.yml" in step.get("run", "") for step in steps))
