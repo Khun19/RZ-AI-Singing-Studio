@@ -36,23 +36,23 @@ class PolicyMutationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_write_all_rejected(self):
-        self.assertNotEqual(self.run_checker(SAFE.replace("permissions:\\n", "permissions: write-all\\n", 1)).returncode, 0)
+        self.assertNotEqual(self.run_checker(SAFE.replace("permissions:\n", "permissions: write-all\n", 1)).returncode, 0)
 
     def test_job_permissions_override_rejected(self):
-        self.assertNotEqual(self.run_checker(SAFE.replace("  check:\\n", "  check:\\n    permissions:\\n      contents: write\\n", 1)).returncode, 0)
+        self.assertNotEqual(self.run_checker(SAFE.replace("  check:\n", "  check:\n    permissions:\n      contents: write\n", 1)).returncode, 0)
 
     def test_explicit_write_grant_rejected(self):
         self.assertNotEqual(self.run_checker(SAFE.replace("contents: read", "contents: write", 1)).returncode, 0)
 
     def test_merge_cli_rejected(self):
-        self.assertNotEqual(self.run_checker(SAFE.replace("jq -e", "gh pr merge 12 --auto\\n          jq -e", 1)).returncode, 0)
+        self.assertNotEqual(self.run_checker(SAFE.replace("jq -e", "gh pr merge 12 --auto\n          jq -e", 1)).returncode, 0)
 
     def test_continued_merge_cli_rejected(self):
-        mutation = SAFE.replace("jq -e", "gh \\\\\\n            pr merge 12 --auto\\n          jq -e", 1)
+        mutation = SAFE.replace("jq -e", "gh \\\n            pr merge 12 --auto\n          jq -e", 1)
         self.assertNotEqual(self.run_checker(mutation).returncode, 0)
 
     def test_merge_api_rejected(self):
-        self.assertNotEqual(self.run_checker(SAFE.replace("jq -e", "gh api repos/x/pulls/12/merge\\n          jq -e", 1)).returncode, 0)
+        self.assertNotEqual(self.run_checker(SAFE.replace("jq -e", "gh api repos/x/pulls/12/merge\n          jq -e", 1)).returncode, 0)
 
     def test_missing_head_validation_rejected(self):
         self.assertNotEqual(self.run_checker(SAFE.replace("EXPECTED_HEAD_SHA", "HEAD_SHA", 2)).returncode, 0)
