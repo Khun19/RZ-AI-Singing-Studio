@@ -7,28 +7,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 CHECKER = ROOT / ".github/scripts/trusted-base-policy-audit.py"
-SAFE = """name: Safe candidate
-on:
-  pull_request:
-    branches: [main]
-permissions:
-  contents: write
-  pull-requests: write
-jobs:
-  merge:
-    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false
-    steps:
-      - env:
-          EXPECTED_HEAD_SHA: github.event.pull_request.head.sha
-          EXPECTED_BASE_SHA: github.event.pull_request.base.sha
-        run: |
-          set -euo pipefail
-          [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$EXPECTED_HEAD_SHA"
-          jq -e '.state == "open" and .base.ref == "main" and .draft == false and .head.repo.full_name == $repo and .head.sha == $head and .base.sha == $base'
-"""
+SAFE = (ROOT / ".github/workflows/automatic-pr-merge.yml").read_text(encoding="utf-8")
 class Tests(unittest.TestCase):
     def check(self, text):
         with tempfile.TemporaryDirectory() as td:
@@ -50,7 +29,7 @@ class Tests(unittest.TestCase):
     def test_alias(self): self.reject(SAFE + "\nextra: *p\n")
     def test_merge_key(self): self.reject(SAFE + "\nextra:\n  <<: {x: y}\n")
     def test_wrong_branch(self): self.reject(SAFE.replace("branches: [main]", "branches: [dev]"))
-    def test_missing_job_guard(self): self.reject(SAFE.replace("    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false\n", ""))
+    def test_missing_job_guard(self): self.reject(SAFE.replace("github.event.pull_request.draft == false", "github.event.pull_request.draft == true", 1))
     def test_missing_draft_api_check(self): self.reject(SAFE.replace(' and .draft == false', ""))
     def test_missing_head_sha_api_check(self): self.reject(SAFE.replace(" and .head.sha == $head", ""))
     def test_missing_base_sha_api_check(self): self.reject(SAFE.replace(" and .base.sha == $base", ""))
