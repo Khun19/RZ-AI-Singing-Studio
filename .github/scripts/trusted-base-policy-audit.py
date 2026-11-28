@@ -3,6 +3,7 @@
 from pathlib import Path
 import re
 import sys
+import textwrap
 try:
     import yaml
     from yaml.tokens import AliasToken, AnchorToken
@@ -71,6 +72,53 @@ for name, job in jobs.items():
             for key in ("EXPECTED_HEAD_SHA", "EXPECTED_BASE_SHA"):
                 if key in env:
                     require("github.event.pull_request." in str(env[key]), f"{key}: event-bound")
+require(set(data.keys()) == {"name", "on", "permissions", "concurrency", "jobs"},
+        "workflow uses only the approved top-level structure")
+job = next(iter(jobs.values()))
+require(set(job.keys()) == {"name", "if", "runs-on", "steps"},
+        "job uses only the approved execution structure")
+steps = job["steps"]
+require(len(steps) == 2, "exactly two approved steps are permitted")
+expected_envs = [
+    {
+        "GH_TOKEN": "$" + "{{ github.token }}",
+        "PR_NUMBER": "$" + "{{ github.event.pull_request.number }}",
+        "EXPECTED_HEAD_SHA": "$" + "{{ github.event.pull_request.head.sha }}",
+        "EXPECTED_BASE_SHA": "$" + "{{ github.event.pull_request.base.sha }}",
+    },
+    {
+        "GH_TOKEN": "$" + "{{ github.token }}",
+        "PR_NUMBER": "$" + "{{ github.event.pull_request.number }}",
+        "EXPECTED_HEAD_SHA": "$" + "{{ github.event.pull_request.head.sha }}",
+    },
+]
+expected_scripts = [
+r"""set -euo pipefail
+[[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+[[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+[[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+jq -e --arg repo "$GITHUB_REPOSITORY" --arg head "$EXPECTED_HEAD_SHA" --arg base "$EXPECTED_BASE_SHA" '
+  .state == "open" and .merged == false and .draft == false
+  and .base.ref == "main"
+  and .head.repo.full_name == $repo
+  and .head.sha == $head
+  and .base.sha == $base
+' <<<"$pr" >/dev/null
+echo "PR identity and exact event SHAs verified." """,
+r"""set -euo pipefail
+gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$EXPECTED_HEAD_SHA"
+echo "GitHub native auto-merge enabled. GitHub will merge only after all active ruleset requirements pass." """
+]
+for index, step in enumerate(steps):
+    require(set(step.keys()) == {"name", "env", "shell", "run"},
+            f"step {index} uses only approved keys")
+    require(step.get("shell") == "bash", f"step {index} uses bash explicitly")
+    require(step.get("env") == expected_envs[index], f"step {index} has exact event-bound environment")
+    actual_script = textwrap.dedent(str(step.get("run", ""))).strip()
+    require(actual_script == textwrap.dedent(expected_scripts[index]).strip(),
+            f"step {index} matches the reviewed command script exactly")
+
 combined = "\n".join(scripts)
 shell_flat = re.sub(r"['\"]", "", combined)
 require("EXPECTED_HEAD_SHA" in combined and "EXPECTED_BASE_SHA" in combined,
