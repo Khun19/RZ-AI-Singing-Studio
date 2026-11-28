@@ -4,11 +4,11 @@ from pathlib import Path
 import re
 import sys
 
-raw = Path(sys.argv[1]).read_text(encoding="utf-8")
+raw = Path(sys.argv[1]).read_text(encoding="utf-8")\nlines = raw.splitlines()
 # Normalize shell continuation lines before command screening.
 text = re.sub(r"\\\s*\n\s*", " ", raw)
 checks = {
-    "top-level read-only permissions": any(raw.splitlines()[i:i+3] == ["permissions:", "  contents: read", "  pull-requests: read"] for i in range(len(raw.splitlines())),
+    "top-level read-only permissions": any(lines[i:i+3] == ["permissions:", "  contents: read", "  pull-requests: read"] for i in range(max(0, len(lines)-2)),
     "no write-all permission declaration": not re.search(r"(?im)^\s*permissions:\s*write-all\s*$", raw),
     "no job-level permissions overrides": not re.search(r"(?m)^\s{4,}permissions:\s*$", raw),
     "no explicit token write grants": not re.search(r"(?im)^\s*(contents|pull-requests|actions|issues|checks|statuses):\s*write\s*$", raw),
