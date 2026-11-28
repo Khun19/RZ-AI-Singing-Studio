@@ -25,8 +25,8 @@ shell_features = {
     "no encoded payload piped to a shell": not re.search(
         r"(?is)(?:base64|openssl\s+enc|printf|echo)[^\n|]*\|\s*(?:ba)?sh\b", normalized
     ),
-    "no merge CLI invocation": not re.search(r"(?i)\bgh\s+pr\s+merge\b", normalized),
-    "no merge API invocation": not re.search(r"(?i)\bgh\s+api\b[^\n]*(?:/merge|merge\?)", normalized),
+    "no merge CLI invocation": not re.search(r"(?i)\bgh\s+pr\s+merge\b", shell_flat),
+    "no merge API invocation": not re.search(r"(?i)\bgh\s+api\b[^\n]*(?:/merge|merge\?)", shell_flat),
     "no ambiguous shell command continuation": not re.search(r"(?m)\\\s*$", raw),
 }
 checks = {
