@@ -64,7 +64,7 @@ class PolicyMutationTests(unittest.TestCase):
         self.assertNotEqual(self.run_checker(SAFE.replace('.base.ref == "main"', "true", 1)).returncode, 0)
 
     def test_draft_restriction_removed_rejected(self):
-        self.assertNotEqual(self.run_checker(SAFE.replace(".draft == false", "true", 1)).returncode, 0)
+        self.assertNotEqual(self.run_checker(SAFE.replace(".draft == false", "true")).returncode, 0)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
