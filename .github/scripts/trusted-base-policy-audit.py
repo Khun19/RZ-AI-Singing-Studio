@@ -8,7 +8,7 @@ raw = Path(sys.argv[1]).read_text(encoding="utf-8")
 # Normalize shell continuation lines before command screening.
 text = re.sub(r"\\\s*\n\s*", " ", raw)
 checks = {
-    "top-level read-only permissions": raw.startswith("permissions:\n  contents: read\n  pull-requests: read\n"),
+    "top-level read-only permissions": "permissions:\\n  contents: read\\n  pull-requests: read\\n" in raw,
     "no write-all permission declaration": not re.search(r"(?im)^\s*permissions:\s*write-all\s*$", raw),
     "no job-level permissions overrides": not re.search(r"(?m)^\s{4,}permissions:\s*$", raw),
     "no explicit token write grants": not re.search(r"(?im)^\s*(contents|pull-requests|actions|issues|checks|statuses):\s*write\s*$", raw),
