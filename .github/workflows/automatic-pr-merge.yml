@@ -5,24 +5,25 @@ on:
     branches: [main]
     types: [opened, reopened, synchronize, ready_for_review]
 
+# Candidate PR code is never run with write privileges by this workflow.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: automatic-merge-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
-  enable-github-auto-merge:
-    name: Enable ruleset-gated automatic squash merge
+  validate-pr-identity:
+    name: Read-only PR identity validation
     if: >-
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - name: Verify current PR identity and exact head
+      - name: Verify PR identity and event SHAs
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -42,16 +43,4 @@ jobs:
             and .head.sha == $head
             and .base.sha == $base
           ' <<<"$pr" >/dev/null
-          echo "PR identity and exact event SHAs verified."
-
-      - name: Queue native GitHub auto-merge
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$EXPECTED_HEAD_SHA"
-          echo "GitHub native auto-merge enabled. GitHub will merge only after all active ruleset requirements pass."
-
+          echo "PR identity verified. This workflow is read-only and does not request or enable merging."
